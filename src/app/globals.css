@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0e0e0e;
+  --foreground: #f2f2f2;
+  --sidebar: #0a0a0a;
+  --surface: #141414;
+  --border: #2a2a2a;
+  --muted: #8b8b8b;
+  --muted-strong: #b0b0b0;
+  --accent: #e0a020;
+  --accent-soft: rgba(224, 160, 32, 0.12);
+  --success: #3dba6e;
+  --success-soft: rgba(61, 186, 110, 0.15);
+  --danger: #e05353;
+  --danger-soft: rgba(224, 83, 83, 0.15);
+  --warning: #e0a020;
+  --pending-bg: #2a2a2a;
+  --pending-fg: #d4d4d4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-pending-bg: var(--pending-bg);
+  --color-pending-fg: var(--pending-fg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
