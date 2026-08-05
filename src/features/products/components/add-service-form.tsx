@@ -19,7 +19,6 @@ export function AddServiceForm() {
   const [category, setCategory] = useState<ServiceCategory>("training");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<CatalogStatus>("Active");
-  const [icon, setIcon] = useState<"headset" | "gradcap">("headset");
   const [images, setImages] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +38,6 @@ export function AddServiceForm() {
           description,
           status,
           images,
-          icon,
         }),
       });
       const data = (await res.json()) as { error?: string };
@@ -151,18 +149,6 @@ export function AddServiceForm() {
             >
               <option value="Active">Active</option>
               <option value="Draft">Draft</option>
-            </select>
-          </Field>
-          <Field label="Icon">
-            <select
-              value={icon}
-              onChange={(e) =>
-                setIcon(e.target.value as "headset" | "gradcap")
-              }
-              className={inputClass}
-            >
-              <option value="headset">Headset</option>
-              <option value="gradcap">Graduation Cap</option>
             </select>
           </Field>
           <div>

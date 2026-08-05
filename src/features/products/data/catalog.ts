@@ -27,7 +27,6 @@ export type CatalogService = {
   description: string;
   status: CatalogStatus;
   images: string[];
-  icon: "headset" | "gradcap";
 };
 
 export const sampleProducts: CatalogProduct[] = [];

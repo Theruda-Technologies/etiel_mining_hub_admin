@@ -192,12 +192,20 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       }
 
       setLastPassword(data.temporaryPassword ?? null);
-      setInviteMessage(
-        data.emailSent
-          ? "Invitation dispatched. Credentials were emailed."
-          : data.emailReason ??
-              "Account created. Copy the temporary password below.",
-      );
+      if (data.emailSent) {
+        setInviteMessage(
+          "Invitation emailed via Supabase. A temporary password is shown below as a backup.",
+        );
+        setInviteError(null);
+      } else {
+        setInviteMessage(
+          "Account created. Copy the temporary password below and share it securely.",
+        );
+        setInviteError(
+          data.emailReason ??
+            "Invite email was not sent. Check Supabase Auth → Email settings.",
+        );
+      }
       setInviteName("");
       setInviteEmail("");
       await loadUsers();

@@ -100,23 +100,17 @@ export async function listServices(): Promise<CatalogService[]> {
 
   if (error || !data) return [];
 
-  return data.map((row) => {
-    const specs = specsToRows(row.specs);
-    const iconSpec = specs.find((s) => s.key.toLowerCase() === "icon");
-
-    return {
-      id: row.id,
-      title: row.name,
-      sku: row.sku,
-      category: defaultServiceCategory(row.category),
-      description: row.description ?? "",
-      status: mapActive(row.is_active),
-      images: Array.isArray(row.image_paths)
-        ? row.image_paths.filter(Boolean)
-        : [],
-      icon: iconSpec?.value === "gradcap" ? "gradcap" : "headset",
-    };
-  });
+  return data.map((row) => ({
+    id: row.id,
+    title: row.name,
+    sku: row.sku,
+    category: defaultServiceCategory(row.category),
+    description: row.description ?? "",
+    status: mapActive(row.is_active),
+    images: Array.isArray(row.image_paths)
+      ? row.image_paths.filter(Boolean)
+      : [],
+  }));
 }
 
 export type CreateProductInput = {
@@ -136,7 +130,6 @@ export type CreateServiceInput = {
   description?: string;
   status?: CatalogStatus;
   images?: string[];
-  icon?: "headset" | "gradcap";
 };
 
 export async function createProduct(input: CreateProductInput) {
@@ -173,10 +166,6 @@ export async function createService(input: CreateServiceInput) {
     return { data: null, error: { message: "Title and SKU are required." } };
   }
 
-  const specs = [
-    { key: "icon", value: input.icon ?? "headset" },
-  ];
-
   return supabase
     .from("services")
     .insert({
@@ -186,7 +175,7 @@ export async function createService(input: CreateServiceInput) {
       category: input.category,
       description: input.description?.trim() ?? "",
       price: 0,
-      specs,
+      specs: [],
       image_paths: input.images ?? [],
       is_active: (input.status ?? "Active") === "Active",
       sort_order: 0,
@@ -239,20 +228,6 @@ export async function updateService(
   if (patch.description !== undefined) updates.description = patch.description;
   if (patch.status !== undefined) updates.is_active = patch.status === "Active";
   if (patch.images !== undefined) updates.image_paths = patch.images;
-
-  if (patch.icon !== undefined) {
-    const { data: current } = await supabase
-      .from("services")
-      .select("specs")
-      .eq("id", id)
-      .maybeSingle();
-    const specs = specsToRows(current?.specs);
-    const next = [...specs];
-    const idx = next.findIndex((s) => s.key.toLowerCase() === "icon");
-    if (idx >= 0) next[idx] = { ...next[idx], value: patch.icon };
-    else next.push({ id: "icon", key: "icon", value: patch.icon });
-    updates.specs = rowsToSpecs(next);
-  }
 
   return supabase.from("services").update(updates).eq("id", id);
 }

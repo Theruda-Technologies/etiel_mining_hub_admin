@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/features/auth/lib/server";
-import { sendInviteEmail } from "@/features/auth/lib/email";
 import { parseRole, type UserRole } from "@/features/auth/types";
 
 function generatePassword() {
@@ -25,9 +24,7 @@ export async function POST(request: Request) {
     const email = body.email?.trim().toLowerCase() ?? "";
     const fullName = body.fullName?.trim() ?? "";
     const role = parseRole(body.role);
-    const avatarUrl =
-      body.avatarUrl?.trim() ||
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&h=160&fit=crop&crop=face";
+    const avatarUrl = body.avatarUrl?.trim() || null;
     const password =
       body.password?.trim() && body.password.trim().length >= 8
         ? body.password.trim()
@@ -40,23 +37,54 @@ export async function POST(request: Request) {
       );
     }
 
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      new URL(request.url).origin;
+    const loginUrl = `${appUrl}/login`;
+
     const admin = createAdminClient();
-    const { data, error } = await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      app_metadata: { role },
-      user_metadata: {
+
+    // Supabase Auth sends the invite email (built-in or project SMTP).
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: loginUrl,
+      data: {
         full_name: fullName,
         invited_by: session.id,
         status: "invited",
-        avatar_url: avatarUrl,
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       },
     });
 
     if (error || !data.user) {
       return NextResponse.json(
-        { error: error?.message ?? "Failed to create user." },
+        {
+          error:
+            error?.message ??
+            "Failed to invite user. Check Supabase Auth email settings.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Role + temporary password so they can also sign in from /login.
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      data.user.id,
+      {
+        app_metadata: { role },
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          invited_by: session.id,
+          status: "invited",
+          ...(avatarUrl ? { avatar_url: avatarUrl } : { avatar_url: null }),
+        },
+      },
+    );
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: updateError.message },
         { status: 400 },
       );
     }
@@ -65,26 +93,16 @@ export async function POST(request: Request) {
       id: data.user.id,
       email,
       full_name: fullName,
-      // Live DB trigger may block writing super_admin onto profiles.
       role: role === "super_admin" ? "admin" : role,
       updated_at: new Date().toISOString(),
     });
 
-    // Best-effort avatar column (optional until migration 003).
-    await admin
-      .from("profiles")
-      .update({ avatar_url: avatarUrl })
-      .eq("id", data.user.id);
-
-    const origin = new URL(request.url).origin;
-    const loginUrl = `${origin}/login`;
-    const emailResult = await sendInviteEmail({
-      to: email,
-      fullName,
-      role,
-      password,
-      loginUrl,
-    });
+    if (avatarUrl) {
+      await admin
+        .from("profiles")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", data.user.id);
+    }
 
     return NextResponse.json({
       user: {
@@ -94,8 +112,7 @@ export async function POST(request: Request) {
         role: role as UserRole,
         avatarUrl,
       },
-      emailSent: emailResult.sent,
-      emailReason: "reason" in emailResult ? emailResult.reason : undefined,
+      emailSent: true,
       temporaryPassword: password,
     });
   } catch (error) {

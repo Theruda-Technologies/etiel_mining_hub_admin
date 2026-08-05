@@ -169,7 +169,7 @@ const SERVICES = [
     description: "On-call technician support for active deployments.",
     category: "field_support",
     price: 0,
-    specs: [{ key: "icon", value: "headset" }],
+    specs: [],
     image_paths: [
       "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=480&h=480&fit=crop",
     ],
@@ -183,7 +183,7 @@ const SERVICES = [
     description: "Three-day certification course for detector operators.",
     category: "training",
     price: 0,
-    specs: [{ key: "icon", value: "gradcap" }],
+    specs: [],
     image_paths: [
       "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=480&h=480&fit=crop",
       "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=480&h=480&fit=crop",
@@ -198,7 +198,7 @@ const SERVICES = [
     description: "Technician team for equipment assembly at the site.",
     category: "on_site_assembly",
     price: 0,
-    specs: [{ key: "icon", value: "headset" }],
+    specs: [],
     image_paths: [
       "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=480&h=480&fit=crop",
     ],
@@ -212,7 +212,7 @@ const SERVICES = [
     description: "Lease and financing options for catalog equipment.",
     category: "financing",
     price: 0,
-    specs: [{ key: "icon", value: "gradcap" }],
+    specs: [],
     image_paths: [],
     is_active: true,
     sort_order: 4,

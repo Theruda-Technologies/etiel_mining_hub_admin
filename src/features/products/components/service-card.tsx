@@ -1,6 +1,6 @@
 "use client";
 
-import { GradCapIcon, HeadsetIcon, TrashIcon } from "@/shared/components/icons";
+import { ImageOffIcon, TrashIcon } from "@/shared/components/icons";
 import { ImageGalleryEditor } from "@/shared/components/image-gallery-editor";
 import { SERVICE_CATEGORIES } from "../data/categories";
 import type { CatalogService } from "../data/catalog";
@@ -24,10 +24,11 @@ export function ServiceCard({ service, onChange, onDelete }: ServiceCardProps) {
               alt={service.title}
               className="size-full object-cover"
             />
-          ) : service.icon === "headset" ? (
-            <HeadsetIcon className="size-12 text-accent" />
           ) : (
-            <GradCapIcon className="size-12 text-accent" />
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-muted">
+              <ImageOffIcon className="size-7" />
+              <span className="text-[10px] tracking-wide uppercase">No Image</span>
+            </div>
           )}
         </div>
 
@@ -99,34 +100,19 @@ export function ServiceCard({ service, onChange, onDelete }: ServiceCardProps) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-[12px] text-muted">
-            Icon
-            <select
-              value={service.icon}
-              onChange={(e) =>
-                onChange({ icon: e.target.value as CatalogService["icon"] })
-              }
-              className="h-9 rounded-md border border-border bg-background px-2 text-[12px]"
-            >
-              <option value="headset">Headset</option>
-              <option value="gradcap">Graduation Cap</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-[12px] text-muted">
-            Status
-            <select
-              value={service.status}
-              onChange={(e) =>
-                onChange({ status: e.target.value as CatalogService["status"] })
-              }
-              className="h-9 rounded-md border border-border bg-background px-2 text-[12px]"
-            >
-              <option value="Active">Active</option>
-              <option value="Draft">Draft</option>
-            </select>
-          </label>
-        </div>
+        <label className="flex items-center gap-2 text-[12px] text-muted">
+          Status
+          <select
+            value={service.status}
+            onChange={(e) =>
+              onChange({ status: e.target.value as CatalogService["status"] })
+            }
+            className="h-9 rounded-md border border-border bg-background px-2 text-[12px]"
+          >
+            <option value="Active">Active</option>
+            <option value="Draft">Draft</option>
+          </select>
+        </label>
         <button
           type="button"
           onClick={onDelete}

@@ -77,8 +77,6 @@ export async function POST(request: Request) {
   await admin.auth.admin.updateUserById(data.user.id, {
     user_metadata: {
       full_name: fullName,
-      avatar_url:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&crop=face",
       status: "active",
     },
   });

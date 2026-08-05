@@ -31,7 +31,6 @@ export async function POST(request: Request) {
     description?: string;
     status?: "Active" | "Draft";
     images?: string[];
-    icon?: "headset" | "gradcap";
   };
 
   if (!body.title?.trim() || !body.sku?.trim()) {
@@ -54,7 +53,6 @@ export async function POST(request: Request) {
     description: body.description,
     status: body.status,
     images: body.images,
-    icon: body.icon,
   });
 
   if (error) {

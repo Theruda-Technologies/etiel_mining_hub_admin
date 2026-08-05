@@ -45,10 +45,14 @@ This loads products, services, sample orders, profile avatars, pending invites, 
 Only the **Super Admin** can invite users (Settings → Administrative Access):
 
 - Choose role: **Administrator** or **Super Admin**
-- Set a temporary access code (or leave blank to auto-generate)
 - Account is created in Supabase Auth + `profiles`
-- If `RESEND_API_KEY` is set, an invite email is sent with the password
-- If not, the temporary password is shown once in the UI
+- Supabase Auth sends the invite email (`inviteUserByEmail`)
+- A temporary password is also shown once in the UI as a backup login
+
+Invite emails use your Supabase project email settings
+(Authentication → Emails). On the free tier, Supabase’s built-in mailer works
+with rate limits. For production, set custom SMTP under
+Project Settings → Authentication → SMTP Settings.
 
 ### Role differences
 
@@ -57,9 +61,10 @@ Only the **Super Admin** can invite users (Settings → Administrative Access):
 | **Super Admin** | Everything + dispatch invitations / revoke pending invites |
 | **Admin** | Dashboard, Orders, Products, Settings (password). Cannot invite |
 
-## 5. Optional email delivery
+## 5. App URL for invite redirects
 
 ```bash
-RESEND_API_KEY=re_xxx
-INVITE_FROM_EMAIL=Etiel Mining Hub <onboarding@resend.dev>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+In production, set this to your deployed admin URL so invite links land correctly.
