@@ -1,10 +1,11 @@
 import type { OrderStatus } from "@/features/orders/data/orders";
 
 export const orderStatusClassName: Record<OrderStatus, string> = {
-  Processed: "bg-success-soft text-success",
   Pending: "bg-pending-bg text-pending-fg",
+  Confirmed: "bg-success-soft text-success",
   Processing: "bg-accent-soft text-accent",
-  Failed: "bg-danger-soft text-danger",
+  Shipped: "bg-success-soft text-success",
+  Cancelled: "bg-danger-soft text-danger",
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {

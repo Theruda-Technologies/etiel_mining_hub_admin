@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import type { DashboardStats } from "../types";
 import type { DashboardOrderRow } from "../api/stats";
 import {
@@ -11,6 +14,7 @@ import {
   TrendUpIcon,
   WarningIcon,
 } from "@/shared/components/icons";
+import { useSearchQuery } from "@/shared/components/search-context";
 
 type DashboardOverviewProps = {
   stats: DashboardStats;
@@ -18,16 +22,39 @@ type DashboardOverviewProps = {
 };
 
 const statusStyles = {
-  PROCESSED: "bg-success-soft text-success",
+  CONFIRMED: "bg-success-soft text-success",
   PENDING: "bg-pending-bg text-pending-fg",
-  FAILED: "bg-danger-soft text-danger",
+  CANCELLED: "bg-danger-soft text-danger",
   PROCESSING: "bg-accent-soft text-accent",
+  SHIPPED: "bg-success-soft text-success",
 } as const;
+
+type StatusFilter = "all" | DashboardOrderRow["status"];
 
 export function DashboardOverview({
   stats,
   orders = [],
 }: DashboardOverviewProps) {
+  const { query } = useSearchQuery();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortNewest, setSortNewest] = useState(true);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = orders.filter((order) => {
+      if (statusFilter !== "all" && order.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        order.id.toLowerCase().includes(q) ||
+        order.client.toLowerCase().includes(q) ||
+        order.equipment.toLowerCase().includes(q) ||
+        order.status.toLowerCase().includes(q) ||
+        order.date.toLowerCase().includes(q)
+      );
+    });
+    return sortNewest ? rows : [...rows].reverse();
+  }, [orders, query, statusFilter, sortNewest]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -52,7 +79,7 @@ export function DashboardOverview({
           />
           <StatusPill
             count={stats.failedCount}
-            label="FAILED"
+            label="CANCELLED"
             tone="danger"
           />
         </div>
@@ -84,21 +111,38 @@ export function DashboardOverview({
 
       <section className="rounded-lg border border-border">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative">
+              <span className="sr-only">Filter by status</span>
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as StatusFilter)
+                }
+                className="h-8 appearance-none rounded-md border border-border bg-surface py-0 pr-8 pl-3 text-[12px] text-muted-strong outline-none"
+              >
+                <option value="all">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="SHIPPED">Shipped</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+              <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
+            </label>
             <button
               type="button"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong transition-colors hover:border-muted"
-            >
-              All Statuses
-              <ChevronDownIcon className="size-3.5 text-muted" />
-            </button>
-            <button
-              type="button"
+              onClick={() => setSortNewest((v) => !v)}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong transition-colors hover:border-muted"
             >
               <FilterIcon className="size-3.5 text-muted" />
-              Sort by Date
+              {sortNewest ? "Newest first" : "Oldest first"}
             </button>
+            {query.trim() ? (
+              <span className="text-[12px] text-muted">
+                Searching “{query.trim()}”
+              </span>
+            ) : null}
           </div>
 
           <h3 className="text-[15px] font-medium text-foreground">
@@ -143,17 +187,19 @@ export function DashboardOverview({
               </tr>
             </thead>
             <tbody>
-              {orders.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
                     className="px-4 py-8 text-center text-[13px] text-muted"
                   >
-                    No orders yet. Run `npm run seed` to load demo data.
+                    {orders.length === 0
+                      ? "No orders yet. Run `npm run seed` to load demo data."
+                      : "No orders match your search or filters."}
                   </td>
                 </tr>
               ) : (
-                orders.map((order) => (
+                filtered.map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-border last:border-b-0"

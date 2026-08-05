@@ -55,13 +55,14 @@ const PRODUCTS = [
     description:
       "Heavy-duty pulse induction metal detector for deep mineral prospecting.",
     category: "metal_detectors",
-    price: 84500,
+    price: 0,
     specs: [
       { key: "Depth Rating", value: "12 m" },
       { key: "Frequency", value: "Multi-pulse" },
     ],
     image_paths: [
       "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=480&h=480&fit=crop",
+      "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=480&h=480&fit=crop",
     ],
     is_active: true,
     sort_order: 1,
@@ -72,7 +73,7 @@ const PRODUCTS = [
     slug: "titan-coil-pro",
     description: "Compact VLF detector optimized for gold nugget hunting.",
     category: "metal_detectors",
-    price: 12800,
+    price: 0,
     specs: [
       { key: "Coil Size", value: "11 in" },
       { key: "Weight", value: "1.4 kg" },
@@ -89,16 +90,62 @@ const PRODUCTS = [
     slug: "stratascan-3d",
     description: "Ground scanner for cavity and anomaly mapping.",
     category: "ground_scanners",
-    price: 64200,
+    price: 0,
     specs: [
       { key: "Scan Depth", value: "25 m" },
       { key: "Modes", value: "3D / Live" },
     ],
     image_paths: [
       "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=480&h=480&fit=crop",
+      "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=480&h=480&fit=crop",
     ],
     is_active: true,
     sort_order: 3,
+  },
+  {
+    sku: "DR-CORE-12",
+    name: "CoreDrill X12",
+    slug: "coredrill-x12",
+    description: "Portable core drilling unit for sample extraction.",
+    category: "drilling",
+    price: 0,
+    specs: [
+      { key: "Max Depth", value: "40 m" },
+      { key: "Bit Size", value: "76 mm" },
+    ],
+    image_paths: [
+      "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=480&h=480&fit=crop",
+    ],
+    is_active: true,
+    sort_order: 4,
+  },
+  {
+    sku: "EX-HAUL-90",
+    name: "Hauler Excavator 90",
+    slug: "hauler-excavator-90",
+    description: "Mid-size excavator for site clearing and trench work.",
+    category: "excavators",
+    price: 0,
+    specs: [{ key: "Bucket", value: "0.9 m³" }],
+    image_paths: [
+      "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=480&h=480&fit=crop",
+    ],
+    is_active: true,
+    sort_order: 5,
+  },
+  {
+    sku: "MS-KIT-01",
+    name: "Field Supplies Kit",
+    slug: "field-supplies-kit",
+    description: "Consumables and tools for multi-day surveys.",
+    category: "mining_supplies",
+    price: 0,
+    specs: [{ key: "Contents", value: "50 pcs" }],
+    image_paths: [
+      "https://images.unsplash.com/photo-1581093458791-9f3c3250a5b1?w=480&h=480&fit=crop",
+    ],
+    is_active: true,
+    sort_order: 6,
   },
   {
     sku: "GS-DRAFT-01",
@@ -106,11 +153,11 @@ const PRODUCTS = [
     slug: "echo-range-lite",
     description: "Entry ground scanner (draft catalog listing).",
     category: "ground_scanners",
-    price: 9200,
+    price: 0,
     specs: [{ key: "Status", value: "Draft" }],
     image_paths: [],
     is_active: false,
-    sort_order: 4,
+    sort_order: 7,
   },
 ];
 
@@ -121,12 +168,11 @@ const SERVICES = [
     slug: "field-support-247",
     description: "On-call technician support for active deployments.",
     category: "field_support",
-    price: 250,
-    specs: [
-      { key: "rate_label", value: "Hourly Rate (USD)" },
-      { key: "icon", value: "headset" },
+    price: 0,
+    specs: [{ key: "icon", value: "headset" }],
+    image_paths: [
+      "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=480&h=480&fit=crop",
     ],
-    image_paths: [],
     is_active: true,
     sort_order: 1,
   },
@@ -136,14 +182,40 @@ const SERVICES = [
     slug: "operator-certification",
     description: "Three-day certification course for detector operators.",
     category: "training",
-    price: 1500,
-    specs: [
-      { key: "rate_label", value: "Course Fee (USD)" },
-      { key: "icon", value: "gradcap" },
+    price: 0,
+    specs: [{ key: "icon", value: "gradcap" }],
+    image_paths: [
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=480&h=480&fit=crop",
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=480&h=480&fit=crop",
     ],
-    image_paths: [],
     is_active: true,
     sort_order: 2,
+  },
+  {
+    sku: "SVC-ASM-ON",
+    name: "On-Site Assembly",
+    slug: "on-site-assembly",
+    description: "Technician team for equipment assembly at the site.",
+    category: "on_site_assembly",
+    price: 0,
+    specs: [{ key: "icon", value: "headset" }],
+    image_paths: [
+      "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=480&h=480&fit=crop",
+    ],
+    is_active: true,
+    sort_order: 3,
+  },
+  {
+    sku: "SVC-FIN-LEASE",
+    name: "Equipment Financing",
+    slug: "equipment-financing",
+    description: "Lease and financing options for catalog equipment.",
+    category: "financing",
+    price: 0,
+    specs: [{ key: "icon", value: "gradcap" }],
+    image_paths: [],
+    is_active: true,
+    sort_order: 4,
   },
 ];
 
@@ -351,7 +423,7 @@ async function seedOrders(productIds, serviceIds) {
     const { data, error } = await admin
       .from("orders")
       .insert(order)
-      .select("id, order_number")
+      .select("id, order_number, status, created_at")
       .single();
     if (error) throw new Error(`order ${order.order_number}: ${error.message}`);
 
@@ -370,6 +442,7 @@ async function seedOrders(productIds, serviceIds) {
     if (itemError) {
       throw new Error(`items ${order.order_number}: ${itemError.message}`);
     }
+
     console.log("seeded order", data.order_number);
   }
 }

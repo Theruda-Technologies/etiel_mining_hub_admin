@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartCheckIcon,
   ChevronDownIcon,
@@ -9,31 +10,38 @@ import {
   ClockIcon,
   GavelIcon,
   MapPinIcon,
-  PencilIcon,
   UserIcon,
 } from "@/shared/components/icons";
-import {
-  type OrderDetail,
-  type OrderStatus,
-} from "../data/orders";
+import { type OrderDetail, type OrderStatus } from "../data/orders";
 import { OrderStatusBadge } from "./order-status-badge";
-
-const statusOptions: OrderStatus[] = [
-  "Processed",
-  "Pending",
-  "Processing",
-  "Failed",
-];
 
 type OrderDetailViewProps = {
   order: OrderDetail;
 };
 
 export function OrderDetailView({ order }: OrderDetailViewProps) {
+  const router = useRouter();
   const [status, setStatus] = useState<OrderStatus>(order.status);
-  const [notes, setNotes] = useState(order.notes);
+  const [internalNotes, setInternalNotes] = useState(order.internalNotes);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStatus(order.status);
+    setInternalNotes(order.internalNotes);
+  }, [order]);
+
+  const statusOptions = useMemo(() => {
+    const options = new Set<OrderStatus>([
+      order.status,
+      ...order.allowedNextStatuses,
+    ]);
+    // Keep the currently selected value visible even before refresh
+    options.add(status);
+    return Array.from(options);
+  }, [order.status, order.allowedNextStatuses, status]);
+
+  const isTerminal = order.allowedNextStatuses.length === 0;
 
   async function handleSave() {
     setSaving(true);
@@ -42,13 +50,18 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
       const res = await fetch("/api/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: order.id, status, notes }),
+        body: JSON.stringify({
+          id: order.uuid || order.id,
+          status,
+          notes: internalNotes,
+        }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         setSaveMessage(data.error ?? "Save failed.");
       } else {
         setSaveMessage("Changes saved.");
+        router.refresh();
       }
     } catch {
       setSaveMessage("Unable to save changes.");
@@ -75,26 +88,10 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
 
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
-              Admin Hub
+              Order #{order.id}
             </h1>
-            <OrderStatusBadge status={order.status} />
+            <OrderStatusBadge status={status} />
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-9 items-center rounded-md border border-border px-4 text-[13px] text-foreground transition-colors hover:border-muted"
-          >
-            Print Invoice
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
-          >
-            <PencilIcon className="size-3.5" />
-            Edit Order
-          </button>
         </div>
       </div>
 
@@ -123,39 +120,52 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {order.items.map((item) => (
-                    <tr key={item.id} className="border-b border-border">
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          {item.image ? (
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="size-12 rounded-md object-cover ring-1 ring-border"
-                            />
-                          ) : (
-                            <div className="flex size-12 items-center justify-center rounded-md bg-background ring-1 ring-border text-[10px] text-muted">
-                              —
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-[13px] font-semibold text-foreground">
-                              {item.name}
-                            </p>
-                            <p className="mt-0.5 text-[12px] text-muted">
-                              {item.description}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 font-mono text-[12px] text-muted-strong">
-                        {item.sku}
-                      </td>
-                      <td className="px-5 py-4 text-[13px] text-foreground">
-                        {item.qty}
+                  {order.items.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="px-5 py-8 text-center text-[13px] text-muted"
+                      >
+                        No line items on this order.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    order.items.map((item) => (
+                      <tr key={item.id} className="border-b border-border">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="size-12 rounded-md object-cover ring-1 ring-border"
+                              />
+                            ) : (
+                              <div className="flex size-12 items-center justify-center rounded-md bg-background text-[10px] text-muted ring-1 ring-border">
+                                —
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-[13px] font-semibold text-foreground">
+                                {item.name}
+                              </p>
+                              {item.description ? (
+                                <p className="mt-0.5 text-[12px] text-muted">
+                                  {item.description}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-mono text-[12px] text-muted-strong">
+                          {item.sku}
+                        </td>
+                        <td className="px-5 py-4 text-[13px] text-foreground">
+                          {item.qty}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -195,6 +205,14 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                     <p key={line}>{line}</p>
                   ))}
                 </div>
+                {order.notes ? (
+                  <div className="mt-4">
+                    <h3 className="mb-2 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
+                      Customer Notes
+                    </h3>
+                    <p className="text-[13px] text-muted-strong">{order.notes}</p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex items-end justify-end">
@@ -221,10 +239,11 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 <span className="relative">
                   <select
                     value={status}
+                    disabled={isTerminal && status === order.status}
                     onChange={(event) =>
                       setStatus(event.target.value as OrderStatus)
                     }
-                    className="h-10 w-full appearance-none rounded-md border border-border bg-background px-3 pr-9 text-[13px] text-foreground outline-none focus:border-accent/50"
+                    className="h-10 w-full appearance-none rounded-md border border-border bg-background px-3 pr-9 text-[13px] text-foreground outline-none focus:border-accent/50 disabled:opacity-60"
                   >
                     {statusOptions.map((option) => (
                       <option key={option} value={option}>
@@ -235,12 +254,22 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                   <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted" />
                 </span>
               </label>
+              {isTerminal ? (
+                <p className="text-[12px] text-muted">
+                  This order is in a final status and cannot be moved further.
+                </p>
+              ) : (
+                <p className="text-[12px] text-muted">
+                  Allowed next:{" "}
+                  {order.allowedNextStatuses.join(", ") || "none"}
+                </p>
+              )}
 
               <label className="flex flex-col gap-2 text-[12px] text-muted">
                 Internal Notes
                 <textarea
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
+                  value={internalNotes}
+                  onChange={(event) => setInternalNotes(event.target.value)}
                   placeholder="Add administrative notes here..."
                   rows={5}
                   className="resize-none rounded-md border border-border bg-background px-3 py-2.5 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
@@ -256,7 +285,15 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 {saving ? "Saving…" : "Save Changes"}
               </button>
               {saveMessage ? (
-                <p className="text-[12px] text-muted">{saveMessage}</p>
+                <p
+                  className={`text-[12px] ${
+                    saveMessage.includes("saved")
+                      ? "text-success"
+                      : "text-danger"
+                  }`}
+                >
+                  {saveMessage}
+                </p>
               ) : null}
             </div>
           </section>
@@ -270,41 +307,50 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             </header>
 
             <ol className="space-y-0 p-5">
-              {order.timeline.map((event, index) => {
-                const isLast = index === order.timeline.length - 1;
+              {order.timeline.length === 0 ? (
+                <li className="text-[13px] text-muted">
+                  No timeline events yet.
+                </li>
+              ) : (
+                order.timeline.map((event, index) => {
+                  const isLast = index === order.timeline.length - 1;
 
-                return (
-                  <li key={event.id} className="relative flex gap-3 pb-5 last:pb-0">
-                    {!isLast ? (
-                      <span className="absolute top-3 left-[7px] h-[calc(100%-4px)] w-px bg-border" />
-                    ) : null}
-                    <span
-                      className={`relative z-10 mt-1.5 size-3.5 shrink-0 rounded-full border-2 ${
-                        event.active
-                          ? "border-accent bg-accent"
-                          : "border-muted bg-background"
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <p
-                          className={`text-[13px] font-medium ${
-                            event.active ? "text-accent" : "text-foreground"
-                          }`}
-                        >
-                          {event.title}
+                  return (
+                    <li
+                      key={event.id}
+                      className="relative flex gap-3 pb-5 last:pb-0"
+                    >
+                      {!isLast ? (
+                        <span className="absolute top-3 left-[7px] h-[calc(100%-4px)] w-px bg-border" />
+                      ) : null}
+                      <span
+                        className={`relative z-10 mt-1.5 size-3.5 shrink-0 rounded-full border-2 ${
+                          event.active
+                            ? "border-accent bg-accent"
+                            : "border-muted bg-background"
+                        }`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <p
+                            className={`text-[13px] font-medium ${
+                              event.active ? "text-accent" : "text-foreground"
+                            }`}
+                          >
+                            {event.title}
+                          </p>
+                          <time className="text-[11px] text-muted">
+                            {event.date}
+                          </time>
+                        </div>
+                        <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                          {event.description}
                         </p>
-                        <time className="text-[11px] text-muted">
-                          {event.date}
-                        </time>
                       </div>
-                      <p className="mt-1 text-[12px] leading-relaxed text-muted">
-                        {event.description}
-                      </p>
-                    </div>
-                  </li>
-                );
-              })}
+                    </li>
+                  );
+                })
+              )}
             </ol>
           </section>
         </div>
@@ -326,9 +372,7 @@ function DetailField({
     <div>
       <dt className="text-[11px] text-muted">{label}</dt>
       <dd
-        className={`mt-0.5 ${
-          accent ? "text-accent" : "text-foreground"
-        }`}
+        className={`mt-0.5 ${accent ? "text-accent" : "text-foreground"}`}
       >
         {value}
       </dd>

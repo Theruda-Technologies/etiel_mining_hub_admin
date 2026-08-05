@@ -33,7 +33,7 @@ Sign in at `/login` with that email and password.
 npm run seed
 ```
 
-This loads products, services, sample orders, profile avatars, and a demo Admin invite:
+This loads products, services, sample orders, profile avatars, pending invites, and order timelines (stored in the private Supabase Storage bucket `order-timeline`).
 
 | Account | Email | Password |
 |---------|-------|----------|

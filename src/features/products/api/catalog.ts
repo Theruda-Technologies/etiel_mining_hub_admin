@@ -5,6 +5,12 @@ import type {
   CatalogStatus,
   SpecRow,
 } from "../data/catalog";
+import {
+  isProductCategory,
+  isServiceCategory,
+  type ProductCategory,
+  type ServiceCategory,
+} from "../data/categories";
 
 function slugify(value: string) {
   return value
@@ -50,6 +56,18 @@ function rowsToSpecs(rows: SpecRow[]) {
     .map((row) => ({ key: row.key, value: row.value }));
 }
 
+function defaultProductCategory(value: unknown): ProductCategory {
+  return isProductCategory(String(value))
+    ? (value as ProductCategory)
+    : "metal_detectors";
+}
+
+function defaultServiceCategory(value: unknown): ServiceCategory {
+  return isServiceCategory(String(value))
+    ? (value as ServiceCategory)
+    : "training";
+}
+
 export async function listProducts(): Promise<CatalogProduct[]> {
   const supabase = await createAuthClient();
   const { data, error } = await supabase
@@ -64,8 +82,9 @@ export async function listProducts(): Promise<CatalogProduct[]> {
     id: row.id,
     title: row.name,
     sku: row.sku,
+    category: defaultProductCategory(row.category),
     status: mapActive(row.is_active),
-    image: Array.isArray(row.image_paths) ? row.image_paths[0] : undefined,
+    images: Array.isArray(row.image_paths) ? row.image_paths.filter(Boolean) : [],
     description: row.description ?? "",
     specs: specsToRows(row.specs),
   }));
@@ -88,10 +107,92 @@ export async function listServices(): Promise<CatalogService[]> {
     return {
       id: row.id,
       title: row.name,
+      sku: row.sku,
+      category: defaultServiceCategory(row.category),
+      description: row.description ?? "",
       status: mapActive(row.is_active),
+      images: Array.isArray(row.image_paths)
+        ? row.image_paths.filter(Boolean)
+        : [],
       icon: iconSpec?.value === "gradcap" ? "gradcap" : "headset",
     };
   });
+}
+
+export type CreateProductInput = {
+  title: string;
+  sku: string;
+  category: ProductCategory;
+  description?: string;
+  status?: CatalogStatus;
+  images?: string[];
+  specs?: SpecRow[];
+};
+
+export type CreateServiceInput = {
+  title: string;
+  sku: string;
+  category: ServiceCategory;
+  description?: string;
+  status?: CatalogStatus;
+  images?: string[];
+  icon?: "headset" | "gradcap";
+};
+
+export async function createProduct(input: CreateProductInput) {
+  const supabase = await createAuthClient();
+  const title = input.title.trim();
+  const sku = input.sku.trim();
+  if (!title || !sku) {
+    return { data: null, error: { message: "Title and SKU are required." } };
+  }
+
+  return supabase
+    .from("products")
+    .insert({
+      name: title,
+      slug: slugify(title) || `product-${Date.now()}`,
+      sku,
+      category: input.category,
+      description: input.description?.trim() ?? "",
+      price: 0,
+      specs: rowsToSpecs(input.specs ?? []),
+      image_paths: input.images ?? [],
+      is_active: (input.status ?? "Draft") === "Active",
+      sort_order: 0,
+    })
+    .select("*")
+    .single();
+}
+
+export async function createService(input: CreateServiceInput) {
+  const supabase = await createAuthClient();
+  const title = input.title.trim();
+  const sku = input.sku.trim();
+  if (!title || !sku) {
+    return { data: null, error: { message: "Title and SKU are required." } };
+  }
+
+  const specs = [
+    { key: "icon", value: input.icon ?? "headset" },
+  ];
+
+  return supabase
+    .from("services")
+    .insert({
+      name: title,
+      slug: slugify(title) || `service-${Date.now()}`,
+      sku,
+      category: input.category,
+      description: input.description?.trim() ?? "",
+      price: 0,
+      specs,
+      image_paths: input.images ?? [],
+      is_active: (input.status ?? "Active") === "Active",
+      sort_order: 0,
+    })
+    .select("*")
+    .single();
 }
 
 export async function updateProduct(
@@ -104,15 +205,14 @@ export async function updateProduct(
   };
   if (patch.title !== undefined) {
     updates.name = patch.title;
-    updates.slug = slugify(patch.title);
+    updates.slug = slugify(patch.title) || `product-${Date.now()}`;
   }
   if (patch.sku !== undefined) updates.sku = patch.sku;
+  if (patch.category !== undefined) updates.category = patch.category;
   if (patch.status !== undefined) updates.is_active = patch.status === "Active";
   if (patch.description !== undefined) updates.description = patch.description;
   if (patch.specs !== undefined) updates.specs = rowsToSpecs(patch.specs);
-  if (patch.image !== undefined) {
-    updates.image_paths = patch.image ? [patch.image] : [];
-  }
+  if (patch.images !== undefined) updates.image_paths = patch.images;
 
   return supabase.from("products").update(updates).eq("id", id);
 }
@@ -132,9 +232,13 @@ export async function updateService(
   };
   if (patch.title !== undefined) {
     updates.name = patch.title;
-    updates.slug = slugify(patch.title);
+    updates.slug = slugify(patch.title) || `service-${Date.now()}`;
   }
+  if (patch.sku !== undefined) updates.sku = patch.sku;
+  if (patch.category !== undefined) updates.category = patch.category;
+  if (patch.description !== undefined) updates.description = patch.description;
   if (patch.status !== undefined) updates.is_active = patch.status === "Active";
+  if (patch.images !== undefined) updates.image_paths = patch.images;
 
   if (patch.icon !== undefined) {
     const { data: current } = await supabase
@@ -151,4 +255,9 @@ export async function updateService(
   }
 
   return supabase.from("services").update(updates).eq("id", id);
+}
+
+export async function deleteService(id: string) {
+  const supabase = await createAuthClient();
+  return supabase.from("services").delete().eq("id", id);
 }

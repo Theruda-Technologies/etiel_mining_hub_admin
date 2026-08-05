@@ -1,11 +1,71 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/features/auth/lib/server";
-import { updateService } from "@/features/products/api/catalog";
+import {
+  createService,
+  deleteService,
+  updateService,
+} from "@/features/products/api/catalog";
 import type { CatalogService } from "@/features/products/data/catalog";
+import {
+  isServiceCategory,
+  type ServiceCategory,
+} from "@/features/products/data/categories";
+
+function assertStaff(session: Awaited<ReturnType<typeof getSession>>) {
+  return (
+    session &&
+    (session.role === "admin" || session.role === "super_admin")
+  );
+}
+
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!assertStaff(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as {
+    title?: string;
+    sku?: string;
+    category?: string;
+    description?: string;
+    status?: "Active" | "Draft";
+    images?: string[];
+    icon?: "headset" | "gradcap";
+  };
+
+  if (!body.title?.trim() || !body.sku?.trim()) {
+    return NextResponse.json(
+      { error: "Title and SKU are required." },
+      { status: 400 },
+    );
+  }
+  if (!body.category || !isServiceCategory(body.category)) {
+    return NextResponse.json(
+      { error: "A valid service category is required." },
+      { status: 400 },
+    );
+  }
+
+  const { data, error } = await createService({
+    title: body.title,
+    sku: body.sku,
+    category: body.category as ServiceCategory,
+    description: body.description,
+    status: body.status,
+    images: body.images,
+    icon: body.icon,
+  });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ service: data });
+}
 
 export async function PATCH(request: Request) {
   const session = await getSession();
-  if (!session || (session.role !== "admin" && session.role !== "super_admin")) {
+  if (!assertStaff(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -18,6 +78,24 @@ export async function PATCH(request: Request) {
   }
 
   const { error } = await updateService(body.id, body.patch);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  const session = await getSession();
+  if (!assertStaff(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as { id?: string };
+  if (!body.id) {
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  const { error } = await deleteService(body.id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

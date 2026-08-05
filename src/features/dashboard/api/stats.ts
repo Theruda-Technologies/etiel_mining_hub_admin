@@ -6,7 +6,7 @@ export type DashboardOrderRow = {
   client: string;
   equipment: string;
   date: string;
-  status: "PROCESSED" | "PENDING" | "FAILED" | "PROCESSING";
+  status: "CONFIRMED" | "PENDING" | "CANCELLED" | "PROCESSING" | "SHIPPED";
 };
 
 function mapDashStatus(
@@ -14,8 +14,9 @@ function mapDashStatus(
 ): DashboardOrderRow["status"] {
   const s = status.toLowerCase();
   if (s === "processing") return "PROCESSING";
-  if (s === "confirmed" || s === "processed") return "PROCESSED";
-  if (s === "cancelled" || s === "failed") return "FAILED";
+  if (s === "confirmed") return "CONFIRMED";
+  if (s === "shipped") return "SHIPPED";
+  if (s === "cancelled" || s === "failed") return "CANCELLED";
   return "PENDING";
 }
 

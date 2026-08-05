@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { AuthSession, UserRole } from "@/features/auth/types";
 import { ROLE_PERMISSIONS, roleLabel } from "@/features/auth/types";
 import {
@@ -8,9 +8,12 @@ import {
   KeyIcon,
   LockIcon,
   SendIcon,
+  UserIcon,
 } from "@/shared/components/icons";
+import { ClickableAvatar } from "@/shared/components/clickable-avatar";
+import { useSearchQuery } from "@/shared/components/search-context";
 
-type PendingInvite = {
+type AdminUser = {
   id: string;
   email: string;
   full_name: string;
@@ -23,6 +26,13 @@ const inputClass =
 
 export function SettingsPanel({ session }: { session: AuthSession }) {
   const canInvite = session.role === "super_admin";
+  const { query } = useSearchQuery();
+
+  const [fullName, setFullName] = useState(session.name);
+  const [avatarUrl, setAvatarUrl] = useState(session.avatarUrl ?? "");
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -39,26 +49,77 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [lastPassword, setLastPassword] = useState<string | null>(null);
 
-  const [pending, setPending] = useState<PendingInvite[]>([]);
-  const [loadingPending, setLoadingPending] = useState(false);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userFilter, setUserFilter] = useState("");
 
-  async function loadPending() {
+  async function loadUsers() {
     if (!canInvite) return;
-    setLoadingPending(true);
+    setLoadingUsers(true);
     try {
-      const res = await fetch("/api/users?status=invited");
-      const data = (await res.json()) as {
-        users?: PendingInvite[];
-      };
-      if (res.ok) setPending(data.users ?? []);
+      const res = await fetch("/api/users");
+      const data = (await res.json()) as { users?: AdminUser[] };
+      if (res.ok) setUsers(data.users ?? []);
     } finally {
-      setLoadingPending(false);
+      setLoadingUsers(false);
     }
   }
 
   useEffect(() => {
-    void loadPending();
+    void loadUsers();
   }, [canInvite]);
+
+  const filteredUsers = useMemo(() => {
+    const q = (userFilter.trim() || query.trim()).toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (user) =>
+        user.full_name.toLowerCase().includes(q) ||
+        user.email.toLowerCase().includes(q) ||
+        roleLabel(user.role).toLowerCase().includes(q) ||
+        user.status.toLowerCase().includes(q),
+    );
+  }, [users, userFilter, query]);
+
+  async function saveProfile(nextAvatarUrl?: string) {
+    setProfileBusy(true);
+    setProfileError(null);
+    setProfileMessage(null);
+    const avatar = nextAvatarUrl !== undefined ? nextAvatarUrl : avatarUrl;
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          avatarUrl: avatar.trim() || null,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setProfileError(data.error ?? "Unable to update profile.");
+        return false;
+      }
+      setProfileMessage("Profile updated.");
+      window.dispatchEvent(new Event("auth-profile-updated"));
+      return true;
+    } catch {
+      setProfileError("Unable to reach profile service.");
+      return false;
+    } finally {
+      setProfileBusy(false);
+    }
+  }
+
+  async function handleProfileUpdate(event: FormEvent) {
+    event.preventDefault();
+    await saveProfile();
+  }
+
+  async function handleAvatarUploaded(url: string) {
+    setAvatarUrl(url);
+    await saveProfile(url);
+  }
 
   async function handlePasswordUpdate(event: FormEvent) {
     event.preventDefault();
@@ -137,7 +198,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       );
       setInviteName("");
       setInviteEmail("");
-      await loadPending();
+      await loadUsers();
     } catch {
       setInviteError("Unable to dispatch invitation.");
     } finally {
@@ -151,7 +212,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (res.ok) await loadPending();
+    if (res.ok) await loadUsers();
   }
 
   return (
@@ -165,6 +226,49 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
         </p>
         <div className="mt-5 h-px bg-border" />
       </div>
+
+      <section className="rounded-lg border border-border bg-surface p-6">
+        <div className="mb-5 flex items-center gap-2">
+          <UserIcon className="size-4 text-accent" />
+          <h3 className="text-[15px] font-medium text-accent">Profile</h3>
+        </div>
+        <form
+          onSubmit={handleProfileUpdate}
+          className="grid gap-6 md:grid-cols-[auto_1fr]"
+        >
+          <ClickableAvatar
+            src={avatarUrl || session.avatarUrl}
+            name={fullName || session.name}
+            size={96}
+            onUploaded={handleAvatarUploaded}
+          />
+          <div className="space-y-4">
+            <Field label="Display Name">
+              <input
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={inputClass}
+                placeholder="Your name"
+              />
+            </Field>
+            <p className="text-[12px] text-muted">{session.email}</p>
+            {profileError ? (
+              <p className="text-[12px] text-danger">{profileError}</p>
+            ) : null}
+            {profileMessage ? (
+              <p className="text-[12px] text-success">{profileMessage}</p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={profileBusy}
+              className="h-11 rounded-md bg-accent px-5 text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
+            >
+              {profileBusy ? "Saving…" : "Save Profile"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       <section className="overflow-hidden rounded-lg border border-border bg-surface">
         <div className="grid xl:grid-cols-2 xl:divide-x xl:divide-border">
@@ -302,14 +406,23 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                 </form>
 
                 <div className="mt-8">
-                  <p className="mb-3 font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
-                    Pending Invitations
-                  </p>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
+                      Users
+                    </p>
+                    <input
+                      type="search"
+                      value={userFilter}
+                      onChange={(e) => setUserFilter(e.target.value)}
+                      placeholder="Search users…"
+                      className="h-8 w-full max-w-[220px] rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
+                    />
+                  </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[480px] border-collapse text-left">
+                    <table className="w-full min-w-[520px] border-collapse text-left">
                       <thead>
                         <tr className="border-b border-border">
-                          {["Name", "Email", "Role", "Action"].map(
+                          {["Name", "Email", "Role", "Status", "Action"].map(
                             (heading) => (
                               <th
                                 key={heading}
@@ -322,49 +435,59 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {loadingPending ? (
+                        {loadingUsers ? (
                           <tr>
                             <td
-                              colSpan={4}
+                              colSpan={5}
                               className="px-1 py-4 text-[12px] text-muted"
                             >
                               Loading…
                             </td>
                           </tr>
-                        ) : pending.length === 0 ? (
+                        ) : filteredUsers.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={4}
+                              colSpan={5}
                               className="px-1 py-4 text-[12px] text-muted"
                             >
-                              No pending invitations.
+                              No users match your search.
                             </td>
                           </tr>
                         ) : (
-                          pending.map((invite) => (
+                          filteredUsers.map((user) => (
                             <tr
-                              key={invite.id}
+                              key={user.id}
                               className="border-b border-border last:border-b-0"
                             >
                               <td className="px-1 py-3.5 text-[13px] text-foreground">
-                                {invite.full_name}
+                                {user.full_name}
                               </td>
                               <td className="px-1 py-3.5 font-mono text-[12px] text-muted-strong">
-                                {invite.email}
+                                {user.email}
                               </td>
                               <td className="px-1 py-3.5">
                                 <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
-                                  {roleLabel(invite.role)}
+                                  {roleLabel(user.role)}
                                 </span>
                               </td>
+                              <td className="px-1 py-3.5 font-mono text-[11px] tracking-wide text-muted uppercase">
+                                {user.status}
+                              </td>
                               <td className="px-1 py-3.5">
-                                <button
-                                  type="button"
-                                  onClick={() => void revokeInvite(invite.id)}
-                                  className="font-mono text-[11px] font-semibold tracking-wide text-danger uppercase hover:underline"
-                                >
-                                  Revoke
-                                </button>
+                                {user.status === "invited" &&
+                                user.id !== session.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void revokeInvite(user.id)}
+                                    className="font-mono text-[11px] font-semibold tracking-wide text-danger uppercase hover:underline"
+                                  >
+                                    Revoke
+                                  </button>
+                                ) : (
+                                  <span className="font-mono text-[11px] text-muted">
+                                    —
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           ))
@@ -382,7 +505,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     {ROLE_PERMISSIONS[session.role].label}
                   </span>
                   . Only a Super Admin can dispatch invitations and manage
-                  pending access.
+                  users.
                 </p>
               </div>
             )}

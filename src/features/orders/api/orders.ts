@@ -1,69 +1,70 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/features/auth/lib/server";
-import type { OrderDetail, OrderStatus } from "../data/orders";
+import type { OrderDetail, OrderStatus, OrderTimelineEvent } from "../data/orders";
+import {
+  UI_TO_DB,
+  allowedNextStatuses,
+  mapDbStatus,
+} from "../data/orders";
 
-const UI_TO_DB: Record<OrderStatus, string> = {
-  Pending: "pending",
-  Processing: "processing",
-  Processed: "confirmed",
-  Failed: "cancelled",
-};
-
-function mapStatus(status: string): OrderStatus {
-  const normalized = status.toLowerCase();
-  if (normalized === "pending") return "Pending";
-  if (normalized === "processing") return "Processing";
-  if (normalized === "confirmed" || normalized === "processed") return "Processed";
-  if (normalized === "cancelled" || normalized === "failed") return "Failed";
-  return "Pending";
+function formatEventDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-function buildTimeline(
-  status: OrderStatus,
-  createdAt: string,
-  updatedAt: string,
-): OrderDetail["timeline"] {
-  const placed = new Date(createdAt);
-  const updated = new Date(updatedAt);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+function titleForStatus(status: string) {
+  switch (status.toLowerCase()) {
+    case "pending":
+      return "Order Placed";
+    case "confirmed":
+      return "Order Confirmed";
+    case "processing":
+      return "Processing";
+    case "shipped":
+      return "Shipped";
+    case "cancelled":
+      return "Order Cancelled";
+    default:
+      return status;
+  }
+}
 
-  const events = [
-    {
-      id: "placed",
-      title: "Order Placed",
-      date: fmt(placed),
-      description: "Order submitted via customer portal.",
-      active: status === "Pending",
-    },
-    {
-      id: "processing",
-      title: "Processing",
-      date: fmt(updated),
-      description: "Operations team reviewing fulfillment requirements.",
-      active: status === "Processing",
-    },
-    {
-      id: "confirmed",
-      title: "Order Confirmed",
-      date: fmt(updated),
-      description: "Order verified and released to logistics.",
-      active: status === "Processed",
-    },
-    {
-      id: "cancelled",
-      title: "Order Cancelled",
-      date: fmt(updated),
-      description: "Order cancelled or marked failed.",
-      active: status === "Failed",
-    },
-  ];
+async function findOrderRow(id: string) {
+  const supabase = await createAuthClient();
+  const admin = createAdminClient();
+  const raw = id.replace(/^#/, "");
+  const normalized = raw.toUpperCase();
 
-  if (status === "Failed") return events.filter((e) => e.id !== "confirmed");
-  return events.filter((e) => e.id !== "cancelled");
+  const byNumber = await supabase
+    .from("orders")
+    .select("id, status, created_at, order_number")
+    .eq("order_number", normalized)
+    .maybeSingle();
+  if (byNumber.data) return byNumber.data;
+
+  const byUuid = await supabase
+    .from("orders")
+    .select("id, status, created_at, order_number")
+    .eq("id", raw)
+    .maybeSingle();
+  if (byUuid.data) return byUuid.data;
+
+  const adminByNumber = await admin
+    .from("orders")
+    .select("id, status, created_at, order_number")
+    .eq("order_number", normalized)
+    .maybeSingle();
+  if (adminByNumber.data) return adminByNumber.data;
+
+  const adminByUuid = await admin
+    .from("orders")
+    .select("id, status, created_at, order_number")
+    .eq("id", raw)
+    .maybeSingle();
+  return adminByUuid.data;
 }
 
 export async function listOrders() {
@@ -87,7 +88,7 @@ export async function listOrders() {
     return {
       id: order.order_number,
       uuid: order.id,
-      status: mapStatus(order.status),
+      status: mapDbStatus(order.status),
       buyer: {
         fullName: order.customer_name,
         company,
@@ -97,52 +98,137 @@ export async function listOrders() {
 }
 
 export async function getOrderById(id: string): Promise<OrderDetail | null> {
-  const normalized = id.replace(/^#/, "").toUpperCase();
+  const raw = id.replace(/^#/, "");
+  const normalized = raw.toUpperCase();
   const supabase = await createAuthClient();
+  const admin = createAdminClient();
+
+  const select = `
+    id,
+    order_number,
+    status,
+    notes,
+    internal_notes,
+    customer_name,
+    customer_email,
+    customer_phone,
+    shipping_address,
+    created_at,
+    updated_at,
+    order_items (
+      id,
+      item_type,
+      quantity,
+      name_snapshot,
+      sku_snapshot,
+      product_id,
+      service_id,
+      products ( description, image_paths ),
+      services ( description, image_paths )
+    )
+  `;
 
   let { data: order } = await supabase
     .from("orders")
-    .select("*")
+    .select(select)
     .eq("order_number", normalized)
     .maybeSingle();
 
   if (!order) {
     const byUuid = await supabase
       .from("orders")
-      .select("*")
-      .eq("id", id.replace(/^#/, ""))
+      .select(select)
+      .eq("id", raw)
       .maybeSingle();
     order = byUuid.data;
   }
 
+  if (!order) {
+    const adminResult = await admin
+      .from("orders")
+      .select(select)
+      .eq("order_number", normalized)
+      .maybeSingle();
+    order = adminResult.data;
+    if (!order) {
+      const byUuid = await admin
+        .from("orders")
+        .select(select)
+        .eq("id", raw)
+        .maybeSingle();
+      order = byUuid.data;
+    }
+  }
+
   if (!order) return null;
 
-  const { data: items } = await supabase
-    .from("order_items")
-    .select("*")
-    .eq("order_id", order.id)
-    .order("created_at", { ascending: true });
+  const status = mapDbStatus(order.status);
+  const rawItems = (order.order_items ?? []) as Array<Record<string, unknown>>;
+  const items = rawItems.map((item) => {
+    const itemType = String(item.item_type ?? "product");
+    const related = itemType === "service" ? item.services : item.products;
+    const catalog = Array.isArray(related)
+      ? (related[0] as
+          | { description?: string; image_paths?: string[] }
+          | undefined)
+      : (related as { description?: string; image_paths?: string[] } | null);
 
-  const mappedItems = (items ?? []).map((item) => ({
-    id: item.id,
-    name: item.name_snapshot,
-    description:
-      item.item_type === "service" ? "Service line item" : "Product line item",
-    sku: item.sku_snapshot,
-    qty: item.quantity,
-    image: "",
-  }));
+    const image =
+      Array.isArray(catalog?.image_paths) && catalog.image_paths[0]
+        ? catalog.image_paths[0]
+        : "";
 
-  const status = mapStatus(order.status);
+    return {
+      id: String(item.id),
+      name: String(item.name_snapshot ?? ""),
+      description: catalog?.description?.trim() || "",
+      sku: String(item.sku_snapshot ?? ""),
+      qty: Number(item.quantity ?? 0),
+      image,
+    };
+  });
+
   const address = String(order.shipping_address ?? "")
     .split(/\n|,/)
     .map((line: string) => line.trim())
     .filter(Boolean);
 
+  const { data: history } = await supabase
+    .from("order_status_history")
+    .select("id, from_status, to_status, note, created_at")
+    .eq("order_id", order.id)
+    .order("created_at", { ascending: true });
+
+  let historyRows = history;
+  if (!historyRows) {
+    const adminHistory = await admin
+      .from("order_status_history")
+      .select("id, from_status, to_status, note, created_at")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: true });
+    historyRows = adminHistory.data;
+  }
+
+  const timeline: OrderTimelineEvent[] = (historyRows ?? []).map(
+    (event, index, arr) => ({
+      id: event.id,
+      title: titleForStatus(event.to_status),
+      date: formatEventDate(event.created_at),
+      description:
+        event.note?.trim() ||
+        (event.from_status
+          ? `Status changed from ${event.from_status} to ${event.to_status}.`
+          : "Order created."),
+      active: index === arr.length - 1,
+    }),
+  );
+
   return {
     id: order.order_number,
+    uuid: order.id,
     status,
-    items: mappedItems,
+    allowedNextStatuses: allowedNextStatuses(order.status),
+    items,
     buyer: {
       fullName: order.customer_name,
       company: address[0] ?? "—",
@@ -151,37 +237,49 @@ export async function getOrderById(id: string): Promise<OrderDetail | null> {
       shippingAddress: address.length ? address : [order.shipping_address],
     },
     notes: order.notes ?? "",
-    timeline: buildTimeline(status, order.created_at, order.updated_at),
+    internalNotes: order.internal_notes ?? "",
+    timeline,
   };
 }
 
 export async function updateOrderStatus(
   id: string,
   status: OrderStatus,
-  notes: string,
+  internalNotes: string,
 ) {
   const supabase = await createAuthClient();
-  const normalized = id.replace(/^#/, "").toUpperCase();
-  const dbStatus = UI_TO_DB[status] ?? "pending";
-
-  const { data: existing } = await supabase
-    .from("orders")
-    .select("id")
-    .or(`order_number.eq.${normalized},id.eq.${id.replace(/^#/, "")}`)
-    .maybeSingle();
+  const existing = await findOrderRow(id);
 
   if (!existing) {
     return { error: { message: "Order not found." } };
   }
 
-  const { error } = await supabase
+  const current = mapDbStatus(existing.status);
+  const nextDb = UI_TO_DB[status];
+
+  if (current !== status) {
+    const { error: rpcError } = await supabase.rpc("update_order_status", {
+      p_order_id: existing.id,
+      p_new_status: nextDb,
+      p_note: internalNotes.trim() || `Status updated to ${nextDb}`,
+    });
+
+    if (rpcError) {
+      return { error: { message: rpcError.message } };
+    }
+  }
+
+  const { error: notesError } = await supabase
     .from("orders")
     .update({
-      status: dbStatus,
-      notes,
+      internal_notes: internalNotes,
       updated_at: new Date().toISOString(),
     })
     .eq("id", existing.id);
 
-  return { error };
+  if (notesError) {
+    return { error: { message: notesError.message } };
+  }
+
+  return { error: null };
 }

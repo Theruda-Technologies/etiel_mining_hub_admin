@@ -1,11 +1,71 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/features/auth/lib/server";
-import { deleteProduct, updateProduct } from "@/features/products/api/catalog";
+import {
+  createProduct,
+  deleteProduct,
+  updateProduct,
+} from "@/features/products/api/catalog";
 import type { CatalogProduct } from "@/features/products/data/catalog";
+import {
+  isProductCategory,
+  type ProductCategory,
+} from "@/features/products/data/categories";
+
+function assertStaff(session: Awaited<ReturnType<typeof getSession>>) {
+  return (
+    session &&
+    (session.role === "admin" || session.role === "super_admin")
+  );
+}
+
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!assertStaff(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as {
+    title?: string;
+    sku?: string;
+    category?: string;
+    description?: string;
+    status?: "Active" | "Draft";
+    images?: string[];
+    specs?: CatalogProduct["specs"];
+  };
+
+  if (!body.title?.trim() || !body.sku?.trim()) {
+    return NextResponse.json(
+      { error: "Title and SKU are required." },
+      { status: 400 },
+    );
+  }
+  if (!body.category || !isProductCategory(body.category)) {
+    return NextResponse.json(
+      { error: "A valid product category is required." },
+      { status: 400 },
+    );
+  }
+
+  const { data, error } = await createProduct({
+    title: body.title,
+    sku: body.sku,
+    category: body.category as ProductCategory,
+    description: body.description,
+    status: body.status,
+    images: body.images,
+    specs: body.specs,
+  });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json({ product: data });
+}
 
 export async function PATCH(request: Request) {
   const session = await getSession();
-  if (!session || (session.role !== "admin" && session.role !== "super_admin")) {
+  if (!assertStaff(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -26,7 +86,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const session = await getSession();
-  if (!session || (session.role !== "admin" && session.role !== "super_admin")) {
+  if (!assertStaff(session)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
