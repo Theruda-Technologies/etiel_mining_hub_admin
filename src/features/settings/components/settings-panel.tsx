@@ -194,7 +194,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       setLastPassword(data.temporaryPassword ?? null);
       if (data.emailSent) {
         setInviteMessage(
-          "Invitation emailed via Supabase. A temporary password is shown below as a backup.",
+          "Invitation emailed with login credentials (including temporary password). A copy is shown below as a backup.",
         );
         setInviteError(null);
       } else {

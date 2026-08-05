@@ -47,7 +47,25 @@ Only the **Super Admin** can invite users (Settings → Administrative Access):
 - Choose role: **Administrator** or **Super Admin**
 - Account is created in Supabase Auth + `profiles`
 - Supabase Auth sends the invite email (`inviteUserByEmail`)
+- The invite email includes the **temporary password** when the Invite template
+  uses `{{ .Data.temporary_password }}` (copy from `supabase/email-templates/invite-user.html`)
 - A temporary password is also shown once in the UI as a backup login
+
+### Invite email template (required for password in email)
+
+1. Open [Authentication → Emails → Invite user](https://supabase.com/dashboard/project/ccompobtyzjanpcfmhxi/auth/templates)
+2. Set subject to: `Your Etiel Mining Hub access credentials`
+3. Paste the HTML from `supabase/email-templates/invite-user.html`
+4. Save
+
+Key template variables:
+
+- `{{ .Data.temporary_password }}` — temporary access code
+- `{{ .Data.full_name }}` — invitee name
+- `{{ .Data.role_label }}` — Admin / Super Admin
+- `{{ .Data.login_url }}` — login page URL
+- `{{ .ConfirmationURL }}` — accept-invite link
+- `{{ .Email }}` — invitee email
 
 Invite emails use your Supabase project email settings
 (Authentication → Emails). On the free tier, Supabase’s built-in mailer works

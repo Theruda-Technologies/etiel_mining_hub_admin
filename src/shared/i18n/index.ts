@@ -9,11 +9,12 @@ export const locales = ["en", "am"] as const;
 export type AppLocale = (typeof locales)[number];
 
 const STORAGE_KEY = "etiel-admin-locale";
+const DEFAULT_LOCALE: AppLocale = "am";
 
 function readStoredLocale(): AppLocale {
-  if (typeof window === "undefined") return "en";
+  if (typeof window === "undefined") return DEFAULT_LOCALE;
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "am" || stored === "en" ? stored : "en";
+  return stored === "am" || stored === "en" ? stored : DEFAULT_LOCALE;
 }
 
 if (!i18n.isInitialized) {
@@ -22,7 +23,7 @@ if (!i18n.isInitialized) {
       en: { translation: en },
       am: { translation: am },
     },
-    lng: "en",
+    lng: DEFAULT_LOCALE,
     fallbackLng: "en",
     interpolation: { escapeValue: false },
     returnNull: false,

@@ -1,0 +1,20 @@
+<!--
+  Paste this into Supabase Dashboard → Authentication → Emails → Invite user
+  Subject: Your Etiel Mining Hub access credentials
+-->
+<h2>Etiel Mining Hub access</h2>
+<p>Hello {{ .Data.full_name }},</p>
+<p>
+  You have been invited as
+  <strong>{{ .Data.role_label }}</strong>
+  to the Etiel Mining Hub Operational Center.
+</p>
+<p><strong>Login URL:</strong> <a href="{{ .Data.login_url }}">{{ .Data.login_url }}</a></p>
+<p><strong>Email:</strong> {{ .Email }}</p>
+<p><strong>Temporary password:</strong> {{ .Data.temporary_password }}</p>
+<p>
+  Sign in with the email and temporary password above, then change your password
+  in System Settings. You can also accept the invite with this link:
+</p>
+<p><a href="{{ .ConfirmationURL }}">Accept invitation</a></p>
+<p style="color:#666;font-size:12px;">© Etiel Mining Hub Operational Center</p>

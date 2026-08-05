@@ -41,16 +41,21 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
       new URL(request.url).origin;
     const loginUrl = `${appUrl}/login`;
+    const roleLabel = role === "super_admin" ? "Super Admin" : "Admin";
 
     const admin = createAdminClient();
 
-    // Supabase Auth sends the invite email (built-in or project SMTP).
+    // Password must be in `data` at invite time so the Auth email template
+    // can render {{ .Data.temporary_password }} (see supabase/email-templates).
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: loginUrl,
       data: {
         full_name: fullName,
         invited_by: session.id,
         status: "invited",
+        role_label: roleLabel,
+        temporary_password: password,
+        login_url: loginUrl,
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       },
     });
@@ -66,7 +71,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Role + temporary password so they can also sign in from /login.
+    // Set login password, role; strip temporary_password from stored metadata.
     const { error: updateError } = await admin.auth.admin.updateUserById(
       data.user.id,
       {
@@ -77,7 +82,9 @@ export async function POST(request: Request) {
           full_name: fullName,
           invited_by: session.id,
           status: "invited",
-          ...(avatarUrl ? { avatar_url: avatarUrl } : { avatar_url: null }),
+          role_label: roleLabel,
+          avatar_url: avatarUrl,
+          temporary_password: null,
         },
       },
     );
