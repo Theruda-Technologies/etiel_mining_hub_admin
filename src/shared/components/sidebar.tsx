@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils";
 import {
   CraneIcon,
@@ -15,17 +16,14 @@ import type { AuthSession, UserRole } from "@/features/auth/types";
 import { canAccessRoute } from "@/features/auth/types";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: GridIcon },
-  { href: "/orders", label: "Orders", icon: PackageIcon },
-  {
-    href: "/products",
-    label: "Products and Services",
-    icon: CraneIcon,
-  },
-  { href: "/settings", label: "Settings", icon: GearIcon },
-];
+  { href: "/dashboard", key: "dashboard", icon: GridIcon },
+  { href: "/orders", key: "orders", icon: PackageIcon },
+  { href: "/products", key: "products", icon: CraneIcon },
+  { href: "/settings", key: "settings", icon: GearIcon },
+] as const;
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -53,16 +51,16 @@ export function Sidebar() {
   return (
     <aside className="flex w-[240px] shrink-0 flex-col border-r border-border bg-sidebar">
       <div className="px-5 pt-6 pb-8">
-        <p className="text-[13px] font-bold tracking-[0.08em] text-accent uppercase">
-          Etiel Mining Hub
+        <p className="font-display text-[13px] font-bold tracking-[0.08em] text-accent uppercase">
+          {t("nav.brand")}
         </p>
         <p className="mt-1 text-[10px] font-medium tracking-[0.14em] text-muted uppercase">
-          Operational Center
+          {t("nav.tagline")}
         </p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
-        {visibleNav.map(({ href, label, icon: Icon }) => {
+        {visibleNav.map(({ href, key, icon: Icon }) => {
           const active =
             pathname === href || pathname.startsWith(`${href}/`);
 
@@ -81,7 +79,7 @@ export function Sidebar() {
                 <span className="absolute top-1/2 left-0 h-5 w-[2px] -translate-y-1/2 rounded-full bg-accent" />
               ) : null}
               <Icon className="size-[18px] shrink-0" />
-              <span>{label}</span>
+              <span>{t(`nav.${key}`)}</span>
             </Link>
           );
         })}
@@ -94,9 +92,9 @@ export function Sidebar() {
           className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-[14px] text-danger transition-colors hover:bg-danger-soft"
         >
           <LogoutIcon className="size-[18px] shrink-0" />
-          <span>Logout</span>
+          <span>{t("common.logout")}</span>
         </button>
-        <p className="mt-6 px-3 text-[11px] text-muted">© 2024 Etiel Admin</p>
+        <p className="mt-6 px-3 text-[11px] text-muted">{t("nav.copyright")}</p>
       </div>
     </aside>
   );

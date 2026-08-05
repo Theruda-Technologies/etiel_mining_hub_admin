@@ -36,12 +36,39 @@
   --color-warning: var(--warning);
   --color-pending-bg: var(--pending-bg);
   --color-pending-fg: var(--pending-fg);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-plex-sans), var(--font-noto-ethiopic),
+    "IBM Plex Sans", sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-noto-ethiopic),
+    "Space Grotesk", sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace,
+    monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-ibm-plex-sans), var(--font-noto-ethiopic),
+    "IBM Plex Sans", system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-display {
+  font-family: var(--font-space-grotesk), var(--font-noto-ethiopic),
+    "Space Grotesk", sans-serif;
+  font-weight: 700;
+}
+
+.font-mono,
+code,
+kbd,
+samp,
+pre,
+[data-specs] {
+  font-family: var(--font-ibm-plex-mono), "IBM Plex Mono", ui-monospace,
+    monospace;
 }

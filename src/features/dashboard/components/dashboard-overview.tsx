@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DashboardStats } from "../types";
 import type { DashboardOrderRow } from "../api/stats";
 import {
+  CartCheckIcon,
   ChevronDownIcon,
   DownloadIcon,
   FilterIcon,
-  HourglassIcon,
-  MoreIcon,
+  HeadsetIcon,
+  PackageIcon,
   SortIcon,
-  TrendUpIcon,
-  WarningIcon,
 } from "@/shared/components/icons";
 import { useSearchQuery } from "@/shared/components/search-context";
 
@@ -31,10 +31,32 @@ const statusStyles = {
 
 type StatusFilter = "all" | DashboardOrderRow["status"];
 
+function exportOrdersCsv(rows: DashboardOrderRow[], filename: string) {
+  const header = ["Order ID", "Client", "Equipment", "Date", "Status"];
+  const lines = [
+    header.join(","),
+    ...rows.map((order) =>
+      [order.id, order.client, order.equipment, order.date, order.status]
+        .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
+        .join(","),
+    ),
+  ];
+  const blob = new Blob([lines.join("\n")], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function DashboardOverview({
   stats,
   orders = [],
 }: DashboardOverviewProps) {
+  const { t } = useTranslation();
   const { query } = useSearchQuery();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortNewest, setSortNewest] = useState(true);
@@ -55,57 +77,77 @@ export function DashboardOverview({
     return sortNewest ? rows : [...rows].reverse();
   }, [orders, query, statusFilter, sortNewest]);
 
+  const columns = [
+    t("dashboard.orderId"),
+    t("dashboard.client"),
+    t("dashboard.equipment"),
+    t("dashboard.date"),
+    t("dashboard.status"),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-[13px] font-medium text-muted">Admin Hub</p>
-        <h2 className="mt-1 text-[28px] font-semibold tracking-tight text-foreground">
-          System Dashboard
-        </h2>
-        <p className="mt-1.5 text-[14px] text-muted">
-          Real-time overview of mining operations and logistics.
+        <p className="text-[13px] font-medium text-muted">
+          {t("common.adminHub")}
         </p>
+        <h2 className="font-display mt-1 text-[28px] font-bold tracking-tight text-foreground">
+          {t("dashboard.title")}
+        </h2>
+        <p className="mt-1.5 text-[14px] text-muted">{t("dashboard.subtitle")}</p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <StatusPill
             count={stats.pendingCount}
-            label="PENDING"
+            label={t("dashboard.pending")}
             tone="warning"
           />
           <StatusPill
             count={stats.processingCount}
-            label="PROCESSING"
+            label={t("dashboard.processing")}
             tone="success"
           />
           <StatusPill
             count={stats.failedCount}
-            label="CANCELLED"
+            label={t("dashboard.cancelled")}
             tone="danger"
           />
         </div>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-3">
         <MetricCard
-          label="New Orders"
-          value={String(stats.newOrders)}
+          label={t("dashboard.products")}
+          value={String(stats.productCount)}
           footer={
-            <span className="flex items-center gap-1 text-success">
-              <span aria-hidden>↑</span> +12% vs last week
-            </span>
+            <Link href="/products" className="text-accent hover:underline">
+              {t("dashboard.manageCatalog")}
+            </Link>
           }
-          icon={<TrendUpIcon className="size-5 text-accent" />}
+          icon={<PackageIcon className="size-5 text-accent" />}
         />
         <MetricCard
-          label="Pending Orders"
-          value={String(stats.pendingOrders)}
+          label={t("dashboard.services")}
+          value={String(stats.serviceCount)}
           footer={
-            <span className="flex items-center gap-1.5 text-danger">
-              <WarningIcon className="size-3.5" />
-              Requires attention
-            </span>
+            <Link
+              href="/products?tab=services"
+              className="text-accent hover:underline"
+            >
+              {t("dashboard.viewServices")}
+            </Link>
           }
-          icon={<HourglassIcon className="size-5 text-muted" />}
+          icon={<HeadsetIcon className="size-5 text-accent" />}
+        />
+        <MetricCard
+          label={t("dashboard.orders")}
+          value={String(stats.orderCount)}
+          footer={
+            <Link href="/orders" className="text-accent hover:underline">
+              {t("dashboard.pendingCount", { count: stats.pendingOrders })}
+            </Link>
+          }
+          icon={<CartCheckIcon className="size-5 text-accent" />}
         />
       </section>
 
@@ -113,7 +155,7 @@ export function DashboardOverview({
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative">
-              <span className="sr-only">Filter by status</span>
+              <span className="sr-only">{t("dashboard.filterByStatus")}</span>
               <select
                 value={statusFilter}
                 onChange={(e) =>
@@ -121,12 +163,12 @@ export function DashboardOverview({
                 }
                 className="h-8 appearance-none rounded-md border border-border bg-surface py-0 pr-8 pl-3 text-[12px] text-muted-strong outline-none"
               >
-                <option value="all">All Statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="PROCESSING">Processing</option>
-                <option value="SHIPPED">Shipped</option>
-                <option value="CANCELLED">Cancelled</option>
+                <option value="all">{t("common.allStatuses")}</option>
+                <option value="PENDING">{t("common.pending")}</option>
+                <option value="CONFIRMED">{t("common.confirmed")}</option>
+                <option value="PROCESSING">{t("common.processing")}</option>
+                <option value="SHIPPED">{t("common.shipped")}</option>
+                <option value="CANCELLED">{t("common.cancelled")}</option>
               </select>
               <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted" />
             </label>
@@ -136,49 +178,48 @@ export function DashboardOverview({
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong transition-colors hover:border-muted"
             >
               <FilterIcon className="size-3.5 text-muted" />
-              {sortNewest ? "Newest first" : "Oldest first"}
+              {sortNewest
+                ? t("dashboard.newestFirst")
+                : t("dashboard.oldestFirst")}
             </button>
             {query.trim() ? (
               <span className="text-[12px] text-muted">
-                Searching “{query.trim()}”
+                {t("dashboard.searching", { query: query.trim() })}
               </span>
             ) : null}
           </div>
 
-          <h3 className="text-[15px] font-medium text-foreground">
-            Recent Orders
+          <h3 className="font-display text-[15px] font-medium text-foreground">
+            {t("dashboard.recentOrders")}
           </h3>
 
           <div className="flex justify-end">
             <button
               type="button"
+              onClick={() =>
+                exportOrdersCsv(filtered, "etiel-orders-export.csv")
+              }
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong transition-colors hover:border-muted"
             >
               <DownloadIcon className="size-3.5 text-muted" />
-              Export CSV
+              {t("common.exportCsv")}
             </button>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left">
+          <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-border">
-                {[
-                  "Order ID",
-                  "Client",
-                  "Equipment",
-                  "Date",
-                  "Status",
-                  "Action",
-                ].map((heading) => (
+                {columns.map((heading) => (
                   <th
                     key={heading}
                     className="px-4 py-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase"
                   >
                     <span className="inline-flex items-center gap-1">
                       {heading}
-                      {heading === "Date" || heading === "Status" ? (
+                      {heading === t("dashboard.date") ||
+                      heading === t("dashboard.status") ? (
                         <SortIcon className="size-3.5 text-muted/70" />
                       ) : null}
                     </span>
@@ -190,12 +231,12 @@ export function DashboardOverview({
               {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={5}
                     className="px-4 py-8 text-center text-[13px] text-muted"
                   >
                     {orders.length === 0
-                      ? "No orders yet. Run `npm run seed` to load demo data."
-                      : "No orders match your search or filters."}
+                      ? t("dashboard.noOrders")
+                      : t("dashboard.noMatches")}
                   </td>
                 </tr>
               ) : (
@@ -218,7 +259,7 @@ export function DashboardOverview({
                     <td className="px-4 py-4 text-[13px] text-foreground">
                       {order.equipment}
                     </td>
-                    <td className="px-4 py-4 text-[13px] text-foreground">
+                    <td className="px-4 py-4 font-mono text-[13px] text-foreground">
                       {order.date}
                     </td>
                     <td className="px-4 py-4">
@@ -227,15 +268,6 @@ export function DashboardOverview({
                       >
                         {order.status}
                       </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <button
-                        type="button"
-                        className="rounded p-1 text-muted transition-colors hover:bg-white/5 hover:text-foreground"
-                        aria-label={`Actions for ${order.id}`}
-                      >
-                        <MoreIcon className="size-4" />
-                      </button>
                     </td>
                   </tr>
                 ))
@@ -301,7 +333,7 @@ function MetricCard({
         </p>
         {icon}
       </div>
-      <p className="mt-4 text-[36px] leading-none font-semibold tracking-tight text-foreground">
+      <p className="font-display mt-4 text-[36px] leading-none font-bold tracking-tight text-foreground">
         {value}
       </p>
       <div className="mt-4 text-[12px]">{footer}</div>

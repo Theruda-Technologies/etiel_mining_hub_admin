@@ -2,14 +2,17 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   KeyIcon,
   LoginArrowIcon,
   ShieldIcon,
   UserIcon,
 } from "@/shared/components/icons";
+import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 
 export function LoginForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,14 +55,17 @@ export function LoginForm() {
       onSubmit={handleSubmit}
       className="relative w-full max-w-[400px] overflow-hidden border border-white/10 bg-[#141414]/95 shadow-2xl backdrop-blur-sm"
     >
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <div className="px-8 pt-10 pb-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <ShieldIcon className="mb-4 size-8 text-accent" />
-          <h1 className="text-[28px] font-semibold tracking-tight text-white">
-            Admin Portal
+          <h1 className="font-display text-[28px] font-bold tracking-tight text-white">
+            {t("login.title")}
           </h1>
           <p className="mt-2 font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
-            Etiel Mining Hub
+            {t("nav.brand")}
           </p>
         </div>
 
@@ -68,7 +74,7 @@ export function LoginForm() {
         <div className="space-y-4">
           <label className="block">
             <span className="mb-2 block font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
-              Operator ID / Email
+              {t("login.email")}
             </span>
             <span className="relative block">
               <UserIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
@@ -86,7 +92,7 @@ export function LoginForm() {
 
           <label className="block">
             <span className="mb-2 block font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
-              Access Code
+              {t("login.password")}
             </span>
             <span className="relative block">
               <KeyIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
@@ -112,14 +118,9 @@ export function LoginForm() {
           disabled={loading}
           className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 bg-accent text-[14px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {loading ? "Authenticating…" : "Authenticate"}
+          {loading ? t("common.loading") : t("login.submit")}
           {!loading ? <LoginArrowIcon className="size-4" /> : null}
         </button>
-
-        <div className="mt-5 space-y-1 font-mono text-[10px] tracking-wide text-muted">
-          <p>Accounts are created by a Super Admin invite.</p>
-          <p>Use the Operator ID / Email and Access Code from your invite email.</p>
-        </div>
       </div>
 
       <div className="flex h-1 w-full bg-white/10">

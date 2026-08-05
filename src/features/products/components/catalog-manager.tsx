@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FilterLinesIcon } from "@/shared/components/icons";
 import { useSearchQuery } from "@/shared/components/search-context";
 import { cn } from "@/shared/utils";
@@ -34,6 +35,7 @@ export function CatalogManager({
   initialProducts = sampleProducts,
   initialServices = sampleServices,
 }: CatalogManagerProps) {
+  const { t } = useTranslation();
   const { query } = useSearchQuery();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [products, setProducts] = useState(initialProducts);
@@ -175,13 +177,12 @@ export function CatalogManager({
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-[15px] font-semibold text-accent">Admin Hub</p>
-          <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-foreground">
-            Product Management
+          <p className="text-[15px] font-semibold text-accent">{t("products.adminHub")}</p>
+          <h1 className="font-display mt-1 text-[28px] font-bold tracking-tight text-foreground">
+            {t("products.title")}
           </h1>
           <p className="mt-1.5 max-w-xl text-[14px] text-muted">
-            Manage catalog entries, update specifications, and control inventory
-            visibility.
+            {t("products.subtitle")}
           </p>
         </div>
 
@@ -190,13 +191,13 @@ export function CatalogManager({
             href="/products/services/new"
             className="inline-flex h-9 items-center rounded-md border border-accent px-4 text-[13px] font-medium text-accent transition-colors hover:bg-accent-soft"
           >
-            Add New Service
+            {t("products.addService")}
           </Link>
           <Link
             href="/products/new"
             className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
           >
-            Add New Product
+            {t("products.addProduct")}
           </Link>
         </div>
       </div>
@@ -204,14 +205,14 @@ export function CatalogManager({
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
           <FilterLinesIcon className="size-3.5" />
-          Filters:
+          {t("products.filters")}
         </span>
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="h-8 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong outline-none"
         >
-          <option value="all">All Categories</option>
+          <option value="all">{t("products.allCategories")}</option>
           {categoryOptions.map((cat) => (
             <option key={cat.value} value={cat.value}>
               {cat.label}
@@ -225,13 +226,13 @@ export function CatalogManager({
           }
           className="h-8 rounded-md border border-border bg-surface px-3 text-[12px] text-muted-strong outline-none"
         >
-          <option value="all">All Statuses</option>
-          <option value="Active">Active</option>
-          <option value="Draft">Draft</option>
+          <option value="all">{t("products.allStatuses")}</option>
+          <option value="Active">{t("common.active")}</option>
+          <option value="Draft">{t("common.draft")}</option>
         </select>
         {query.trim() ? (
           <span className="text-[12px] text-muted">
-            Searching “{query.trim()}”
+            {t("products.searching", { query: query.trim() })}
           </span>
         ) : null}
       </div>
@@ -239,10 +240,10 @@ export function CatalogManager({
       <div className="flex gap-6 border-b border-border">
         {(
           [
-            ["products", "Products"],
-            ["services", "Services"],
+            ["products", "products.productsTab"],
+            ["services", "products.servicesTab"],
           ] as const
-        ).map(([key, label]) => (
+        ).map(([key, labelKey]) => (
           <button
             key={key}
             type="button"
@@ -255,7 +256,7 @@ export function CatalogManager({
               tab === key ? "text-accent" : "text-muted hover:text-foreground",
             )}
           >
-            {label}
+            {t(labelKey)}
             {tab === key ? (
               <span className="absolute inset-x-0 -bottom-px h-0.5 bg-accent" />
             ) : null}
@@ -265,7 +266,7 @@ export function CatalogManager({
 
       {tab === "products" ? (
         filteredProducts.length === 0 ? (
-          <p className="text-[13px] text-muted">No products match your filters.</p>
+          <p className="text-[13px] text-muted">{t("products.noProducts")}</p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {filteredProducts.map((product) => (
@@ -279,7 +280,7 @@ export function CatalogManager({
           </div>
         )
       ) : filteredServices.length === 0 ? (
-        <p className="text-[13px] text-muted">No services match your filters.</p>
+        <p className="text-[13px] text-muted">{t("products.noServices")}</p>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {filteredServices.map((service) => (

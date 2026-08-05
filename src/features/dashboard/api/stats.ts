@@ -22,11 +22,13 @@ function mapDashStatus(
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createAuthClient();
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, status, created_at");
+  const [ordersRes, productsRes, servicesRes] = await Promise.all([
+    supabase.from("orders").select("id, status", { count: "exact" }),
+    supabase.from("products").select("id", { count: "exact", head: true }),
+    supabase.from("services").select("id", { count: "exact", head: true }),
+  ]);
 
-  const list = orders ?? [];
+  const list = ordersRes.data ?? [];
   const pending = list.filter((o) => o.status === "pending").length;
   const processing = list.filter((o) => o.status === "processing").length;
   const failed = list.filter(
@@ -37,7 +39,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pendingCount: pending,
     processingCount: processing,
     failedCount: failed,
-    newOrders: list.length,
+    productCount: productsRes.count ?? 0,
+    serviceCount: servicesRes.count ?? 0,
+    orderCount: ordersRes.count ?? list.length,
     pendingOrders: pending,
   };
 }

@@ -101,7 +101,7 @@ export function ProductCard({ product, onChange, onDelete }: ProductCardProps) {
         />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4" data-specs>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[11px] tracking-[0.06em] text-muted uppercase">
             Technical Specifications
@@ -138,7 +138,7 @@ export function ProductCard({ product, onChange, onDelete }: ProductCardProps) {
                   );
                   onChange({ specs });
                 }}
-                className="border-r border-border bg-background px-3 py-2.5 text-[12px] text-foreground outline-none"
+                className="border-r border-border bg-background px-3 py-2.5 font-mono text-[12px] text-foreground outline-none"
               />
               <input
                 value={spec.value}

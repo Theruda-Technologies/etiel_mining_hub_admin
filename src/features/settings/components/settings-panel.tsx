@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AuthSession, UserRole } from "@/features/auth/types";
 import { ROLE_PERMISSIONS, roleLabel } from "@/features/auth/types";
 import {
@@ -25,6 +26,7 @@ const inputClass =
   "h-11 w-full rounded-md border border-border bg-background px-3 font-mono text-[13px] text-foreground outline-none placeholder:text-muted focus:border-accent/50";
 
 export function SettingsPanel({ session }: { session: AuthSession }) {
+  const { t } = useTranslation();
   const canInvite = session.role === "super_admin";
   const { query } = useSearchQuery();
 
@@ -218,11 +220,11 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-[28px] font-semibold tracking-tight text-foreground">
-          System Settings
+        <h2 className="font-display text-[28px] font-bold tracking-tight text-foreground">
+          {t("settings.title")}
         </h2>
         <p className="mt-1.5 text-[14px] text-muted">
-          Manage administrative access and security protocols.
+          {t("settings.subtitle")}
         </p>
         <div className="mt-5 h-px bg-border" />
       </div>
@@ -230,7 +232,9 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="mb-5 flex items-center gap-2">
           <UserIcon className="size-4 text-accent" />
-          <h3 className="text-[15px] font-medium text-accent">Profile</h3>
+          <h3 className="text-[15px] font-medium text-accent">
+            {t("settings.profile")}
+          </h3>
         </div>
         <form
           onSubmit={handleProfileUpdate}
@@ -243,7 +247,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             onUploaded={handleAvatarUploaded}
           />
           <div className="space-y-4">
-            <Field label="Display Name">
+            <Field label={t("settings.displayName")}>
               <input
                 required
                 value={fullName}
@@ -264,7 +268,9 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
               disabled={profileBusy}
               className="h-11 rounded-md bg-accent px-5 text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
             >
-              {profileBusy ? "Saving…" : "Save Profile"}
+              {profileBusy
+                ? t("settings.saving")
+                : t("settings.saveProfile")}
             </button>
           </div>
         </form>
@@ -276,12 +282,12 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             <div className="mb-6 flex items-center gap-2">
               <LockIcon className="size-4 text-accent" />
               <h3 className="text-[15px] font-medium text-accent">
-                Security Configuration
+                {t("settings.security")}
               </h3>
             </div>
 
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
-              <Field label="Current Password">
+              <Field label={t("settings.currentPassword")}>
                 <input
                   type="password"
                   required
@@ -291,7 +297,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                   placeholder="••••••••"
                 />
               </Field>
-              <Field label="New Password">
+              <Field label={t("settings.newPassword")}>
                 <input
                   type="password"
                   required
@@ -302,7 +308,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                   minLength={8}
                 />
               </Field>
-              <Field label="Confirm New Password">
+              <Field label={t("settings.confirmPassword")}>
                 <input
                   type="password"
                   required
@@ -326,7 +332,9 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                 disabled={passwordBusy}
                 className="mt-2 h-11 w-full rounded-md bg-accent text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
               >
-                {passwordBusy ? "Updating…" : "Update Password"}
+                {passwordBusy
+                  ? t("settings.updating")
+                  : t("settings.updatePassword")}
               </button>
             </form>
           </div>
@@ -335,18 +343,18 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             <div className="mb-2 flex items-center gap-2">
               <KeyIcon className="size-4 text-accent" />
               <h3 className="text-[15px] font-medium text-accent">
-                Administrative Access
+                {t("settings.adminAccess")}
               </h3>
             </div>
             <p className="mb-6 text-[13px] text-muted">
-              Grant operational access to new administrative personnel.
+              {t("settings.adminAccessHint")}
             </p>
 
             {canInvite ? (
               <>
                 <form onSubmit={handleInvite} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Full Name">
+                    <Field label={t("settings.fullName")}>
                       <input
                         required
                         value={inviteName}
@@ -355,7 +363,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                         placeholder="John Doe"
                       />
                     </Field>
-                    <Field label="Institutional Email">
+                    <Field label={t("settings.email")}>
                       <input
                         required
                         type="email"
@@ -367,7 +375,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     </Field>
                   </div>
 
-                  <Field label="Role Assignment">
+                  <Field label={t("settings.role")}>
                     <span className="relative block">
                       <select
                         value={inviteRole}
@@ -400,7 +408,9 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     disabled={inviteBusy}
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
                   >
-                    {inviteBusy ? "Dispatching…" : "Dispatch Invitation"}
+                    {inviteBusy
+                      ? t("settings.dispatching")
+                      : t("settings.dispatch")}
                     {!inviteBusy ? <SendIcon className="size-4" /> : null}
                   </button>
                 </form>
@@ -408,13 +418,13 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                 <div className="mt-8">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <p className="font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
-                      Users
+                      {t("settings.users")}
                     </p>
                     <input
                       type="search"
                       value={userFilter}
                       onChange={(e) => setUserFilter(e.target.value)}
-                      placeholder="Search users…"
+                      placeholder={t("settings.searchUsers")}
                       className="h-8 w-full max-w-[220px] rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
                     />
                   </div>
@@ -422,7 +432,13 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     <table className="w-full min-w-[520px] border-collapse text-left">
                       <thead>
                         <tr className="border-b border-border">
-                          {["Name", "Email", "Role", "Status", "Action"].map(
+                          {[
+                            t("settings.name"),
+                            t("login.email"),
+                            t("settings.role"),
+                            t("settings.status"),
+                            t("settings.action"),
+                          ].map(
                             (heading) => (
                               <th
                                 key={heading}
@@ -450,7 +466,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                               colSpan={5}
                               className="px-1 py-4 text-[12px] text-muted"
                             >
-                              No users match your search.
+                              {t("settings.noUsers")}
                             </td>
                           </tr>
                         ) : (
@@ -481,7 +497,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                                     onClick={() => void revokeInvite(user.id)}
                                     className="font-mono text-[11px] font-semibold tracking-wide text-danger uppercase hover:underline"
                                   >
-                                    Revoke
+                                    {t("settings.revoke")}
                                   </button>
                                 ) : (
                                   <span className="font-mono text-[11px] text-muted">

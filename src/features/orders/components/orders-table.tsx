@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { OrderStatusBadge } from "@/features/orders/components/order-status-badge";
 import type { OrderStatus } from "@/features/orders/data/orders";
 import { useSearchQuery } from "@/shared/components/search-context";
@@ -22,6 +23,7 @@ const ALL_STATUSES: Array<"all" | OrderStatus> = [
 ];
 
 export function OrdersTable({ orders }: { orders: OrderRow[] }) {
+  const { t } = useTranslation();
   const { query } = useSearchQuery();
   const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all");
 
@@ -39,6 +41,18 @@ export function OrdersTable({ orders }: { orders: OrderRow[] }) {
     });
   }, [orders, query, statusFilter]);
 
+  const statusLabel = (status: "all" | OrderStatus) => {
+    if (status === "all") return t("common.allStatuses");
+    const map: Record<OrderStatus, string> = {
+      Pending: t("common.pending"),
+      Confirmed: t("common.confirmed"),
+      Processing: t("common.processing"),
+      Shipped: t("common.shipped"),
+      Cancelled: t("common.cancelled"),
+    };
+    return map[status];
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -51,13 +65,13 @@ export function OrdersTable({ orders }: { orders: OrderRow[] }) {
         >
           {ALL_STATUSES.map((status) => (
             <option key={status} value={status}>
-              {status === "all" ? "All Statuses" : status}
+              {statusLabel(status)}
             </option>
           ))}
         </select>
         {query.trim() ? (
           <span className="text-[12px] text-muted">
-            Searching “{query.trim()}”
+            {t("orders.searching", { query: query.trim() })}
           </span>
         ) : null}
       </div>
@@ -67,7 +81,12 @@ export function OrdersTable({ orders }: { orders: OrderRow[] }) {
           <table className="w-full min-w-[640px] border-collapse text-left">
             <thead>
               <tr className="border-b border-border">
-                {["Order ID", "Buyer", "Company", "Status"].map((heading) => (
+                {[
+                  t("orders.orderId"),
+                  t("orders.buyer"),
+                  t("orders.company"),
+                  t("orders.status"),
+                ].map((heading) => (
                   <th
                     key={heading}
                     className="px-4 py-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase"
@@ -84,7 +103,7 @@ export function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     colSpan={4}
                     className="px-4 py-8 text-center text-[13px] text-muted"
                   >
-                    No orders match your search or filters.
+                    {t("orders.noMatches")}
                   </td>
                 </tr>
               ) : (

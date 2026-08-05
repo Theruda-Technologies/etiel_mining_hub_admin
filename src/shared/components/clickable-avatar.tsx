@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ProfileAvatar } from "@/shared/components/profile-avatar";
 import { uploadImageFile } from "@/shared/lib/upload-image";
 
@@ -17,6 +18,7 @@ export function ClickableAvatar({
   size = 96,
   onUploaded,
 }: ClickableAvatarProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +48,11 @@ export function ClickableAvatar({
         onClick={() => inputRef.current?.click()}
         disabled={busy}
         className="group relative rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
-        aria-label="Change profile photo"
+        aria-label={t("settings.clickPhoto")}
       >
         <ProfileAvatar src={src} name={name} size={size} />
         <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-[11px] font-medium tracking-wide text-white uppercase opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-          {busy ? "…" : "Change"}
+          {busy ? "…" : t("common.save")}
         </span>
       </button>
       <input
@@ -64,7 +66,7 @@ export function ClickableAvatar({
         }}
       />
       {error ? <p className="text-[11px] text-danger">{error}</p> : null}
-      <p className="text-[11px] text-muted">Click photo to update</p>
+      <p className="text-[11px] text-muted">{t("settings.clickPhoto")}</p>
     </div>
   );
 }
