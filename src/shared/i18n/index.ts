@@ -8,8 +8,8 @@ import am from "./locales/am.json";
 export const locales = ["en", "am"] as const;
 export type AppLocale = (typeof locales)[number];
 
+export const DEFAULT_LOCALE: AppLocale = "am";
 const STORAGE_KEY = "etiel-admin-locale";
-const DEFAULT_LOCALE: AppLocale = "am";
 
 function readStoredLocale(): AppLocale {
   if (typeof window === "undefined") return DEFAULT_LOCALE;
@@ -17,17 +17,22 @@ function readStoredLocale(): AppLocale {
   return stored === "am" || stored === "en" ? stored : DEFAULT_LOCALE;
 }
 
+const resources = {
+  en: { translation: en },
+  am: { translation: am },
+};
+
 if (!i18n.isInitialized) {
   void i18n.use(initReactI18next).init({
-    resources: {
-      en: { translation: en },
-      am: { translation: am },
-    },
+    resources,
     lng: DEFAULT_LOCALE,
     fallbackLng: "en",
     interpolation: { escapeValue: false },
     returnNull: false,
   });
+} else if (typeof window === "undefined") {
+  // Avoid a stale singleton language from HMR / prior requests during SSR.
+  void i18n.changeLanguage(DEFAULT_LOCALE);
 }
 
 export function setAppLocale(locale: AppLocale) {
@@ -38,6 +43,7 @@ export function setAppLocale(locale: AppLocale) {
   }
 }
 
+/** Apply saved preference after mount only (keeps SSR/client markup aligned). */
 export function bootstrapLocale() {
   const locale = readStoredLocale();
   setAppLocale(locale);
