@@ -64,10 +64,23 @@ Continue using `npm run dev` for day-to-day Next.js development.
 
 ## Post-deploy checks
 
-1. Open the Workers URL `/login`
-2. Add the Workers URL to Supabase Auth → URL configuration (Site URL + Redirect URLs)
-3. Send a test invite (uses Resend HTTP API, not SMTP sockets)
-4. Run `supabase/migrations/007_catalog_categories_table.sql` in the SQL Editor if categories are still on fallbacks
+1. Super Admin is ensured automatically at the end of `npm run deploy` (via `scripts/ensure-super-admin.mjs`).
+   To run it alone: `npm run setup:superadmin`
+2. Open the Workers URL `/login` with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` from `.env.local`
+3. Add the Workers URL to Supabase Auth → URL configuration (Site URL + Redirect URLs)
+4. Send a test invite (uses Resend HTTP API, not SMTP sockets)
+5. Run `supabase/migrations/007_catalog_categories_table.sql` in the SQL Editor if categories are still on fallbacks
+
+### Manual bootstrap via API (optional)
+
+```bash
+curl -X POST https://etiel-mining-hub-admin.herieshetu.workers.dev/api/setup/bootstrap \
+  -H "Content-Type: application/json" \
+  -H "x-setup-secret: $SUPER_ADMIN_SETUP_SECRET" \
+  -d '{}'
+```
+
+Requires Worker secrets: `SUPER_ADMIN_SETUP_SECRET`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Workers Builds (Git, optional)
 

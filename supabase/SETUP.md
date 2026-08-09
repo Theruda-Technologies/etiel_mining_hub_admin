@@ -38,7 +38,13 @@ SUPER_ADMIN_EMAIL=superadmin@etiel.mining
 SUPER_ADMIN_PASSWORD=SuperAdmin!234
 ```
 
-Then call:
+Then create/update the Super Admin in Supabase (idempotent):
+
+```bash
+npm run setup:superadmin
+```
+
+Or via API while the app is running:
 
 ```bash
 curl -X POST http://localhost:3000/api/setup/bootstrap \
@@ -46,6 +52,8 @@ curl -X POST http://localhost:3000/api/setup/bootstrap \
   -H "x-setup-secret: etiel-setup-2024" \
   -d '{"email":"superadmin@etiel.mining","password":"SuperAdmin!234","fullName":"Super Admin"}'
 ```
+
+`npm run deploy` also runs `setup:superadmin` after uploading to Cloudflare.
 
 Sign in at `/login` with that email and password.
 

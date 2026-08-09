@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * One-time bootstrap for the first Super Admin.
+ * Idempotent Super Admin bootstrap.
+ * Creates the user if missing, or promotes/updates an existing account.
  * Requires SUPER_ADMIN_SETUP_SECRET matching the request header `x-setup-secret`.
  */
 export async function POST(request: Request) {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const body = (await request.json()) as {
+  const body = (await request.json().catch(() => ({}))) as {
     email?: string;
     password?: string;
     fullName?: string;
@@ -38,51 +39,64 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  const { data: existing } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("role", "super_admin")
-    .limit(1);
-
-  if (existing && existing.length > 0) {
-    return NextResponse.json(
-      { error: "A Super Admin already exists." },
-      { status: 409 },
-    );
-  }
-
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    app_metadata: { role: "super_admin" },
-    user_metadata: { full_name: fullName },
+  const { data: listed, error: listError } = await admin.auth.admin.listUsers({
+    perPage: 200,
   });
-
-  if (error || !data.user) {
-    return NextResponse.json(
-      { error: error?.message ?? "Failed to create Super Admin." },
-      { status: 400 },
-    );
+  if (listError) {
+    return NextResponse.json({ error: listError.message }, { status: 500 });
   }
 
+  let user = listed.users.find((u) => u.email?.toLowerCase() === email);
+  let created = false;
+
+  if (!user) {
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: { role: "super_admin" },
+      user_metadata: {
+        full_name: fullName,
+        status: "active",
+      },
+    });
+
+    if (error || !data.user) {
+      return NextResponse.json(
+        { error: error?.message ?? "Failed to create Super Admin." },
+        { status: 400 },
+      );
+    }
+    user = data.user;
+    created = true;
+  } else {
+    const { error } = await admin.auth.admin.updateUserById(user.id, {
+      password,
+      email_confirm: true,
+      app_metadata: { ...user.app_metadata, role: "super_admin" },
+      user_metadata: {
+        ...user.user_metadata,
+        full_name: fullName,
+        status: "active",
+      },
+    });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+  }
+
+  // profiles.role may not allow "super_admin" on the live DB; Auth app_metadata is source of truth.
   await admin.from("profiles").upsert({
-    id: data.user.id,
+    id: user.id,
     email,
     full_name: fullName,
-    role: "admin", // live DB may block writing super_admin on profiles; auth metadata is source of truth
+    role: "admin",
     updated_at: new Date().toISOString(),
-  });
-
-  await admin.auth.admin.updateUserById(data.user.id, {
-    user_metadata: {
-      full_name: fullName,
-      status: "active",
-    },
   });
 
   return NextResponse.json({
     ok: true,
-    user: { id: data.user.id, email, role: "super_admin" },
+    created,
+    user: { id: user.id, email, role: "super_admin" },
   });
 }
