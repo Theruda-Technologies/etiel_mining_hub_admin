@@ -8,6 +8,7 @@ import {
   LoginArrowIcon,
   UserIcon,
 } from "@/shared/components/icons";
+import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 
 export function LoginForm() {
@@ -95,15 +96,14 @@ export function LoginForm() {
               {t("login.password")}
             </span>
             <span className="relative block">
-              <KeyIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-              <input
-                type="password"
+              <KeyIcon className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted" />
+              <PasswordInput
                 required
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="h-11 w-full border border-white/15 bg-[#0f0f0f] pr-3 pl-10 text-[13px] text-foreground outline-none placeholder:text-muted/70 focus:border-accent/60"
+                inputClassName="h-11 w-full border border-white/15 bg-[#0f0f0f] pl-10 text-[13px] text-foreground outline-none placeholder:text-muted/70 focus:border-accent/60"
               />
             </span>
           </label>

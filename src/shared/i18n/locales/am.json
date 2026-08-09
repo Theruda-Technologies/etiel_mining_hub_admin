@@ -27,7 +27,9 @@
     "noImage": "ምስል የለም",
     "removeImage": "ምስል አስወግድ",
     "uploadUnreachable": "የሰቀላ አገልግሎቱን ማግኘት አልተቻለም።",
-    "galleryHint": "እስከ {{max}} ምስሎች። የመጀመሪያው ምስል እንደ ትንሽ ምስል ይጠቀማል።"
+    "galleryHint": "እስከ {{max}} ምስሎች። የመጀመሪያው ምስል እንደ ትንሽ ምስል ይጠቀማል።",
+    "showPassword": "የይለፍ ቃል አሳይ",
+    "hidePassword": "የይለፍ ቃል ደብቅ"
   },
   "nav": {
     "brand": "ኢቲኤል ማይኒንግ ሃብ",

@@ -27,7 +27,9 @@
     "noImage": "No Image",
     "removeImage": "Remove image",
     "uploadUnreachable": "Unable to reach upload service.",
-    "galleryHint": "Up to {{max}} images. First image is used as the thumbnail."
+    "galleryHint": "Up to {{max}} images. First image is used as the thumbnail.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "nav": {
     "brand": "Etiel Mining Hub",

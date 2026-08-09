@@ -15,6 +15,7 @@ import {
   UserIcon,
 } from "@/shared/components/icons";
 import { ClickableAvatar } from "@/shared/components/clickable-avatar";
+import { PasswordInput } from "@/shared/components/password-input";
 import { ProfileAvatar } from "@/shared/components/profile-avatar";
 import { useSearchQuery } from "@/shared/components/search-context";
 
@@ -370,33 +371,33 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
             <form onSubmit={handlePasswordUpdate} className="space-y-4">
               <Field label={t("settings.currentPassword")}>
-                <input
-                  type="password"
+                <PasswordInput
                   required
+                  autoComplete="current-password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className={inputClass}
+                  inputClassName={inputClass}
                   placeholder="••••••••"
                 />
               </Field>
               <Field label={t("settings.newPassword")}>
-                <input
-                  type="password"
+                <PasswordInput
                   required
+                  autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className={inputClass}
+                  inputClassName={inputClass}
                   placeholder="••••••••"
                   minLength={8}
                 />
               </Field>
               <Field label={t("settings.confirmPassword")}>
-                <input
-                  type="password"
+                <PasswordInput
                   required
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputClass}
+                  inputClassName={inputClass}
                   placeholder="••••••••"
                   minLength={8}
                 />
