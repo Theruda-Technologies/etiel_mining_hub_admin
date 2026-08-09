@@ -16,7 +16,7 @@ export function OrdersPageClient({ orders }: { orders: OrderRow[] }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="font-display text-[28px] font-bold tracking-tight">
+        <h2 className="font-display text-[24px] font-bold tracking-tight sm:text-[28px]">
           {t("orders.title")}
         </h2>
         <p className="mt-1 text-[14px] text-muted">{t("orders.subtitle")}</p>

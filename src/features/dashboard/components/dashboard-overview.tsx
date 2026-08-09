@@ -91,7 +91,7 @@ export function DashboardOverview({
         <p className="text-[13px] font-medium text-muted">
           {t("common.adminHub")}
         </p>
-        <h2 className="font-display mt-1 text-[28px] font-bold tracking-tight text-foreground">
+        <h2 className="font-display mt-1 text-[24px] font-bold tracking-tight text-foreground sm:text-[28px]">
           {t("dashboard.title")}
         </h2>
         <p className="mt-1.5 text-[14px] text-muted">{t("dashboard.subtitle")}</p>
@@ -115,7 +115,7 @@ export function DashboardOverview({
         </div>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           label={t("dashboard.products")}
           value={String(stats.productCount)}
@@ -152,7 +152,7 @@ export function DashboardOverview({
       </section>
 
       <section className="rounded-lg border border-border">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-border px-4 py-3">
+        <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:px-4 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative">
               <span className="sr-only">{t("dashboard.filterByStatus")}</span>
@@ -189,11 +189,11 @@ export function DashboardOverview({
             ) : null}
           </div>
 
-          <h3 className="font-display text-[15px] font-medium text-foreground">
+          <h3 className="font-display order-first text-[15px] font-medium text-foreground lg:order-none lg:text-center">
             {t("dashboard.recentOrders")}
           </h3>
 
-          <div className="flex justify-end">
+          <div className="flex lg:justify-end">
             <button
               type="button"
               onClick={() =>

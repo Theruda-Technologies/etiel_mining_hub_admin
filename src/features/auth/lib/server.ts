@@ -4,28 +4,30 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { parseRole, type AuthSession, type UserRole } from "../types";
 
 export async function createAuthClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  }
+
   const cookieStore = await cookies();
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
-          } catch {
-            // Called from a Server Component — cookies may be read-only here.
-          }
-        },
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options),
+          );
+        } catch {
+          // Called from a Server Component — cookies may be read-only here.
+        }
       },
     },
-  );
+  });
 }
 
 function resolveRole(
@@ -41,55 +43,66 @@ function resolveRole(
 }
 
 export async function getSession(): Promise<AuthSession | null> {
-  const supabase = await createAuthClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  let profile: {
-    full_name?: string;
-    role?: string;
-    email?: string;
-  } | null = null;
-
   try {
-    const result = await supabase
-      .from("profiles")
-      .select("full_name, role, email")
-      .eq("id", user.id)
-      .maybeSingle();
-    profile = result.data;
-  } catch {
-    profile = null;
-  }
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+      !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()
+    ) {
+      return null;
+    }
 
-  const metaStatus = user.user_metadata?.status as string | undefined;
-  if (metaStatus === "suspended") {
+    const supabase = await createAuthClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    let profile: {
+      full_name?: string;
+      role?: string;
+      email?: string;
+    } | null = null;
+
+    try {
+      const result = await supabase
+        .from("profiles")
+        .select("full_name, role, email")
+        .eq("id", user.id)
+        .maybeSingle();
+      profile = result.data;
+    } catch {
+      profile = null;
+    }
+
+    const metaStatus = user.user_metadata?.status as string | undefined;
+    if (metaStatus === "suspended") {
+      return null;
+    }
+
+    const avatarUrl =
+      typeof user.user_metadata?.avatar_url === "string"
+        ? user.user_metadata.avatar_url
+        : null;
+
+    return {
+      id: user.id,
+      email: profile?.email ?? user.email ?? "",
+      name:
+        profile?.full_name ??
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.email?.split("@")[0] ?? "User"),
+      role: resolveRole(
+        user.app_metadata?.role,
+        profile?.role,
+        user.user_metadata?.role,
+      ),
+      avatarUrl,
+      authenticatedAt: new Date().toISOString(),
+    };
+  } catch {
     return null;
   }
-
-  const avatarUrl =
-    typeof user.user_metadata?.avatar_url === "string"
-      ? user.user_metadata.avatar_url
-      : null;
-
-  return {
-    id: user.id,
-    email: profile?.email ?? user.email ?? "",
-    name:
-      profile?.full_name ??
-      (user.user_metadata?.full_name as string | undefined) ??
-      (user.email?.split("@")[0] ?? "User"),
-    role: resolveRole(
-      user.app_metadata?.role,
-      profile?.role,
-      user.user_metadata?.role,
-    ),
-    avatarUrl,
-    authenticatedAt: new Date().toISOString(),
-  };
 }
 
 export async function requireSession() {

@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/shared/utils";
 import {
+  CloseIcon,
   CraneIcon,
   GearIcon,
   GridIcon,
   LogoutIcon,
   PackageIcon,
 } from "./icons";
+import { useMobileNav } from "./mobile-nav-context";
 import type { AuthSession, UserRole } from "@/features/auth/types";
 import { canAccessRoute } from "@/features/auth/types";
 
@@ -26,6 +28,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
+  const { open, setOpen } = useMobileNav();
   const [session, setSession] = useState<AuthSession | null>(null);
 
   useEffect(() => {
@@ -48,12 +51,13 @@ export function Sidebar() {
     canAccessRoute(role, item.href),
   );
 
-  return (
-    <aside className="flex w-[240px] shrink-0 flex-col border-r border-border bg-sidebar">
-      <div className="px-5 pt-5 pb-6">
+  const nav = (
+    <>
+      <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-6">
         <Link
           href="/dashboard"
-          className="flex items-center gap-3"
+          className="flex min-w-0 items-center gap-3"
+          onClick={() => setOpen(false)}
         >
           <img
             src="/etiel-logo.png"
@@ -64,6 +68,14 @@ export function Sidebar() {
             {t("nav.brand")}
           </span>
         </Link>
+        <button
+          type="button"
+          className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted md:hidden"
+          onClick={() => setOpen(false)}
+          aria-label={t("common.close")}
+        >
+          <CloseIcon className="size-4" />
+        </button>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
@@ -75,6 +87,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={() => setOpen(false)}
               className={cn(
                 "relative flex items-center gap-3 rounded-md px-3 py-2.5 text-[14px] transition-colors",
                 active
@@ -95,7 +108,7 @@ export function Sidebar() {
       <div className="mt-auto px-3 pb-6">
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => void handleLogout()}
           className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-[14px] text-danger transition-colors hover:bg-danger-soft"
         >
           <LogoutIcon className="size-[18px] shrink-0" />
@@ -103,6 +116,41 @@ export function Sidebar() {
         </button>
         <p className="mt-6 px-3 text-[11px] text-muted">{t("nav.copyright")}</p>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden w-[240px] shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+        {nav}
+      </aside>
+
+      {/* Mobile drawer */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 md:hidden",
+          open ? "pointer-events-auto" : "pointer-events-none",
+        )}
+      >
+        <button
+          type="button"
+          aria-label={t("common.close")}
+          className={cn(
+            "absolute inset-0 bg-black/60 transition-opacity",
+            open ? "opacity-100" : "opacity-0",
+          )}
+          onClick={() => setOpen(false)}
+        />
+        <aside
+          className={cn(
+            "absolute inset-y-0 left-0 flex w-[min(280px,86vw)] flex-col border-r border-border bg-sidebar shadow-xl transition-transform duration-200",
+            open ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          {nav}
+        </aside>
+      </div>
+    </>
   );
 }

@@ -54,17 +54,17 @@ export function LoginForm() {
       onSubmit={handleSubmit}
       className="relative w-full max-w-[400px] overflow-hidden border border-white/10 bg-[#141414]/95 shadow-2xl backdrop-blur-sm"
     >
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 z-10">
         <LanguageSwitcher />
       </div>
-      <div className="px-8 pt-10 pb-8">
+      <div className="px-5 pt-10 pb-8 sm:px-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <img
             src="/etiel-logo.png"
             alt={t("nav.brand")}
-            className="mb-5 h-28 w-auto object-contain bg-transparent"
+            className="mb-5 h-20 w-auto bg-transparent object-contain sm:h-28"
           />
-          <h1 className="font-display text-[28px] font-bold tracking-tight text-white">
+          <h1 className="font-display text-[24px] font-bold tracking-tight text-white sm:text-[28px]">
             {t("login.title")}
           </h1>
         </div>

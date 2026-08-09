@@ -302,7 +302,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="font-display text-[28px] font-bold tracking-tight text-foreground">
+        <h2 className="font-display text-[24px] font-bold tracking-tight text-foreground sm:text-[28px]">
           {t("settings.title")}
         </h2>
         <p className="mt-1.5 text-[14px] text-muted">
@@ -311,7 +311,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
         <div className="mt-5 h-px bg-border" />
       </div>
 
-      <section className="rounded-lg border border-border bg-surface p-6">
+      <section className="rounded-lg border border-border bg-surface p-4 sm:p-6">
         <div className="mb-5 flex items-center gap-2">
           <UserIcon className="size-4 text-accent" />
           <h3 className="text-[15px] font-medium text-accent">
@@ -320,7 +320,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
         </div>
         <form
           onSubmit={handleProfileUpdate}
-          className="grid gap-6 md:grid-cols-[auto_1fr]"
+          className="grid gap-6 justify-items-center md:grid-cols-[auto_1fr] md:justify-items-stretch md:items-start"
         >
           <ClickableAvatar
             src={avatarUrl || session.avatarUrl}
@@ -328,7 +328,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             size={96}
             onUploaded={handleAvatarUploaded}
           />
-          <div className="space-y-4">
+          <div className="w-full min-w-0 space-y-4">
             <Field label={t("settings.displayName")}>
               <input
                 required
@@ -338,7 +338,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                 placeholder={t("settings.placeholderName")}
               />
             </Field>
-            <p className="text-[12px] text-muted">{session.email}</p>
+            <p className="break-all text-[12px] text-muted">{session.email}</p>
             {profileError ? (
               <p className="text-[12px] text-danger">{profileError}</p>
             ) : null}
@@ -348,7 +348,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             <button
               type="submit"
               disabled={profileBusy}
-              className="h-11 rounded-md bg-accent px-5 text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
+              className="h-11 w-full rounded-md bg-accent px-5 text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60 sm:w-auto"
             >
               {profileBusy
                 ? t("settings.saving")
@@ -360,7 +360,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
       <section className="overflow-hidden rounded-lg border border-border bg-surface">
         <div className="grid xl:grid-cols-2 xl:divide-x xl:divide-border">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="mb-6 flex items-center gap-2">
               <LockIcon className="size-4 text-accent" />
               <h3 className="text-[15px] font-medium text-accent">
@@ -421,7 +421,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
             </form>
           </div>
 
-          <div className="border-t border-border p-6 xl:border-t-0">
+          <div className="border-t border-border p-4 sm:p-6 xl:border-t-0">
             <div className="mb-2 flex items-center gap-2">
               <KeyIcon className="size-4 text-accent" />
               <h3 className="text-[15px] font-medium text-accent">
@@ -480,7 +480,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
             {canManageUsers ? (
               <div className={canInvite ? "mt-8" : undefined}>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                   <p className="font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
                     {t("settings.users")}
                   </p>
@@ -489,10 +489,61 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     value={userFilter}
                     onChange={(e) => setUserFilter(e.target.value)}
                     placeholder={t("settings.searchUsers")}
-                    className="h-8 w-full max-w-[220px] rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
+                    className="h-8 w-full rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50 sm:max-w-[220px]"
                   />
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Mobile card list */}
+                <div className="space-y-3 md:hidden">
+                  {loadingUsers ? (
+                    <p className="text-[12px] text-muted">{t("common.loading")}</p>
+                  ) : filteredUsers.length === 0 ? (
+                    <p className="text-[12px] text-muted">{t("settings.noUsers")}</p>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <article
+                        key={user.id}
+                        className="rounded-md border border-border bg-background p-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <ProfileAvatar
+                            src={user.avatar_url}
+                            name={user.full_name || user.email}
+                            size={40}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-medium text-foreground">
+                              {user.full_name}
+                            </p>
+                            <p className="mt-0.5 break-all font-mono text-[12px] text-muted-strong">
+                              {user.email}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
+                                {user.role === "super_admin"
+                                  ? t("settings.roleSuperAdmin")
+                                  : t("settings.roleAdmin")}
+                              </span>
+                              <span className="font-mono text-[11px] tracking-wide text-muted uppercase">
+                                {user.status === "suspended"
+                                  ? t("settings.statusSuspended")
+                                  : user.status === "invited"
+                                    ? t("settings.statusInvited")
+                                    : t("settings.statusActive")}
+                              </span>
+                            </div>
+                            <div className="mt-3">
+                              {renderUserActions(user)}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full min-w-[520px] border-collapse text-left">
                     <thead>
                       <tr className="border-b border-border">

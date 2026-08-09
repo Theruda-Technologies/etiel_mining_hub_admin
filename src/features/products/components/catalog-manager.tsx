@@ -180,12 +180,12 @@ export function CatalogManager({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-6">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0">
           <p className="text-[15px] font-semibold text-accent">
             {t("products.adminHub")}
           </p>
-          <h1 className="font-display mt-1 text-[28px] font-bold tracking-tight text-foreground">
+          <h1 className="font-display mt-1 text-[24px] font-bold tracking-tight text-foreground sm:text-[28px]">
             {t("products.title")}
           </h1>
           <p className="mt-1.5 max-w-xl text-[14px] text-muted">
@@ -193,16 +193,16 @@ export function CatalogManager({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
           <Link
             href="/products/services/new"
-            className="inline-flex h-9 items-center rounded-md border border-accent px-4 text-[13px] font-medium text-accent transition-colors hover:bg-accent-soft"
+            className="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-accent px-4 text-[13px] font-medium text-accent transition-colors hover:bg-accent-soft sm:flex-none"
           >
             {t("products.addService")}
           </Link>
           <Link
             href="/products/new"
-            className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-[13px] font-semibold text-black transition-opacity hover:opacity-90"
+            className="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-accent px-4 text-[13px] font-semibold text-black transition-opacity hover:opacity-90 sm:flex-none"
           >
             {t("products.addProduct")}
           </Link>
@@ -402,97 +402,161 @@ function CatalogListTable({
   const router = useRouter();
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full min-w-[720px] border-collapse text-left">
-        <thead>
-          <tr className="border-b border-border">
-            {[
-              t("products.image"),
-              t("products.name"),
-              t("products.category"),
-              t("products.status"),
-              t("settings.action"),
-            ].map((heading) => (
-              <th
-                key={heading}
-                className="px-4 py-3 font-mono text-[10px] font-medium tracking-[0.08em] text-muted uppercase"
-              >
-                {heading}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              role="link"
-              tabIndex={0}
+    <>
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((row) => (
+          <article
+            key={row.id}
+            className="rounded-lg border border-border bg-surface p-3"
+          >
+            <button
+              type="button"
               onClick={() => router.push(row.href)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  router.push(row.href);
-                }
-              }}
-              className="cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-white/[0.02]"
+              className="flex w-full items-start gap-3 text-left"
             >
-              <td className="px-4 py-3">
-                <div className="size-14 overflow-hidden rounded-md border border-border bg-background">
-                  {row.image ? (
-                    <img
-                      src={row.image}
-                      alt={row.title}
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-muted">
-                      <ImageOffIcon className="size-5" />
-                    </div>
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-[14px] font-medium text-foreground">
-                {row.title}
-              </td>
-              <td className="px-4 py-3 text-[13px] text-muted-strong">
-                {row.categoryLabel}
-              </td>
-              <td className="px-4 py-3">
+              <div className="size-16 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+                {row.image ? (
+                  <img
+                    src={row.image}
+                    alt={row.title}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-muted">
+                    <ImageOffIcon className="size-5" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-foreground">
+                  {row.title}
+                </p>
+                <p className="mt-0.5 text-[12px] text-muted-strong">
+                  {row.categoryLabel}
+                </p>
                 <span
-                  className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] font-semibold ${statusClass(row.status)}`}
+                  className={`mt-2 inline-flex rounded-md border px-2.5 py-1 text-[11px] font-semibold ${statusClass(row.status)}`}
                 >
                   {row.status === "Active"
                     ? t("common.active")
                     : t("common.draft")}
                 </span>
-              </td>
-              <td
-                className="px-4 py-3"
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
+              </div>
+            </button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link
+                href={row.href}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-border text-[13px] font-medium text-foreground hover:border-accent/50 hover:text-accent"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link
-                    href={row.href}
-                    className="inline-flex h-8 items-center rounded-md border border-border px-3 text-[12px] font-medium text-foreground hover:border-accent/50 hover:text-accent"
-                  >
-                    {t("products.edit")}
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={busyId === row.id}
-                    onClick={() => onDelete(row.id)}
-                    className="inline-flex h-8 items-center rounded-md border border-danger/60 px-3 text-[12px] font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
-                  >
-                    {t("common.delete")}
-                  </button>
-                </div>
-              </td>
+                {t("products.edit")}
+              </Link>
+              <button
+                type="button"
+                disabled={busyId === row.id}
+                onClick={() => onDelete(row.id)}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-danger/60 text-[13px] font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
+        <table className="w-full min-w-[720px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-border">
+              {[
+                t("products.image"),
+                t("products.name"),
+                t("products.category"),
+                t("products.status"),
+                t("settings.action"),
+              ].map((heading) => (
+                <th
+                  key={heading}
+                  className="px-4 py-3 font-mono text-[10px] font-medium tracking-[0.08em] text-muted uppercase"
+                >
+                  {heading}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(row.href)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(row.href);
+                  }
+                }}
+                className="cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-white/[0.02]"
+              >
+                <td className="px-4 py-3">
+                  <div className="size-14 overflow-hidden rounded-md border border-border bg-background">
+                    {row.image ? (
+                      <img
+                        src={row.image}
+                        alt={row.title}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-muted">
+                        <ImageOffIcon className="size-5" />
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-[14px] font-medium text-foreground">
+                  {row.title}
+                </td>
+                <td className="px-4 py-3 text-[13px] text-muted-strong">
+                  {row.categoryLabel}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] font-semibold ${statusClass(row.status)}`}
+                  >
+                    {row.status === "Active"
+                      ? t("common.active")
+                      : t("common.draft")}
+                  </span>
+                </td>
+                <td
+                  className="px-4 py-3"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={row.href}
+                      className="inline-flex h-8 items-center rounded-md border border-border px-3 text-[12px] font-medium text-foreground hover:border-accent/50 hover:text-accent"
+                    >
+                      {t("products.edit")}
+                    </Link>
+                    <button
+                      type="button"
+                      disabled={busyId === row.id}
+                      onClick={() => onDelete(row.id)}
+                      className="inline-flex h-8 items-center rounded-md border border-danger/60 px-3 text-[12px] font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
+                    >
+                      {t("common.delete")}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
