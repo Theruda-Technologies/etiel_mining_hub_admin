@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession, requireSuperAdmin } from "@/features/auth/lib/server";
-import { parseRole } from "@/features/auth/types";
+import {
+  canBlockUser,
+  parseRole,
+  type UserRole,
+} from "@/features/auth/types";
 
 export async function GET(request: Request) {
   const session = await getSession();
@@ -61,8 +65,8 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   const session = await getSession();
-  if (!session || session.role !== "super_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = (await request.json()) as {
@@ -75,17 +79,29 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "User id is required." }, { status: 400 });
   }
 
+  if (body.id === session.id) {
+    return NextResponse.json(
+      { error: "You cannot change your own account status or role here." },
+      { status: 400 },
+    );
+  }
+
   const admin = createAdminClient();
   const { data: authUser } = await admin.auth.admin.getUserById(body.id);
   if (!authUser.user) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
+  const targetRole = parseRole(authUser.user.app_metadata?.role) as UserRole;
+
+  // Role changes remain Super Admin only.
   if (body.role) {
+    if (session.role !== "super_admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     await admin.auth.admin.updateUserById(body.id, {
       app_metadata: { ...authUser.user.app_metadata, role: body.role },
     });
-    // Profile role updates may be blocked by DB trigger; auth metadata is source of truth.
     await admin
       .from("profiles")
       .update({ role: body.role, updated_at: new Date().toISOString() })
@@ -93,11 +109,29 @@ export async function PATCH(request: Request) {
   }
 
   if (body.status) {
+    const isBlockAction =
+      body.status === "suspended" || body.status === "active";
+
+    if (isBlockAction) {
+      if (!canBlockUser(session.role, targetRole)) {
+        return NextResponse.json(
+          {
+            error:
+              "You can only block or unblock Admin accounts.",
+          },
+          { status: 403 },
+        );
+      }
+    } else if (session.role !== "super_admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await admin.auth.admin.updateUserById(body.id, {
       user_metadata: {
         ...authUser.user.user_metadata,
         status: body.status,
       },
+      ban_duration: body.status === "suspended" ? "876000h" : "none",
     });
   }
 

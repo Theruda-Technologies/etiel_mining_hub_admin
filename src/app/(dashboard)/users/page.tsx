@@ -1,12 +1,7 @@
-import { UsersTable, listUsers } from "@/features/users";
+import { listUsers } from "@/features/users";
+import { UsersPageClient } from "@/features/users/components/users-page-client";
 
 export default async function UsersPage() {
   const users = await listUsers();
-
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-      <UsersTable users={users} />
-    </div>
-  );
+  return <UsersPageClient users={users} />;
 }

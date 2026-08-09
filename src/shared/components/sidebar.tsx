@@ -50,13 +50,20 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[240px] shrink-0 flex-col border-r border-border bg-sidebar">
-      <div className="px-5 pt-6 pb-8">
-        <p className="font-display text-[13px] font-bold tracking-[0.08em] text-accent uppercase">
-          {t("nav.brand")}
-        </p>
-        <p className="mt-1 text-[10px] font-medium tracking-[0.14em] text-muted uppercase">
-          {t("nav.tagline")}
-        </p>
+      <div className="px-5 pt-5 pb-6">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3"
+        >
+          <img
+            src="/etiel-logo.png"
+            alt=""
+            className="h-10 w-auto shrink-0 object-contain"
+          />
+          <span className="font-display text-[15px] leading-snug font-semibold tracking-tight text-foreground">
+            {t("nav.brand")}
+          </span>
+        </Link>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">

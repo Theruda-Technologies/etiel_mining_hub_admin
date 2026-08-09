@@ -7,9 +7,15 @@ export {
 export { CatalogManager } from "./components/catalog-manager";
 export { AddProductForm } from "./components/add-product-form";
 export { AddServiceForm } from "./components/add-service-form";
+export { ProductDetailEditor } from "./components/product-detail-editor";
+export { ServiceDetailEditor } from "./components/service-detail-editor";
 export {
   listProducts,
   listServices,
+  getProduct,
+  getService,
+  getAdvertisement,
+  clearAdvertisement,
   updateProduct,
   updateService,
   deleteProduct,
@@ -17,6 +23,7 @@ export {
   createProduct,
   createService,
 } from "./api/catalog";
+export type { AdvertisementItem } from "./api/catalog";
 export { sampleProducts, sampleServices } from "./data/catalog";
 export type {
   CatalogProduct,

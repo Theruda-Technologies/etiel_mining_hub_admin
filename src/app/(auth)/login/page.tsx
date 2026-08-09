@@ -1,4 +1,5 @@
-import { LoginForm } from "@/features/auth";
+import { LoginForm } from "@/features/auth/components/login-form";
+import { LoginFooter } from "./login-footer";
 
 export default function LoginPage() {
   return (
@@ -16,12 +17,7 @@ export default function LoginPage() {
         <LoginForm />
       </div>
 
-      <footer className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-4 font-mono text-[10px] tracking-[0.12em] text-white/70 uppercase">
-        <p>© 2024 Etiel Mining Hub. Operational Center.</p>
-        <a href="mailto:support@etiel.mining" className="hover:text-accent">
-          Technical Support
-        </a>
-      </footer>
+      <LoginFooter />
     </main>
   );
 }

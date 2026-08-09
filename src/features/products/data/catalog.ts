@@ -17,6 +17,7 @@ export type CatalogProduct = {
   images: string[];
   description: string;
   specs: SpecRow[];
+  advertised: boolean;
 };
 
 export type CatalogService = {
@@ -27,6 +28,7 @@ export type CatalogService = {
   description: string;
   status: CatalogStatus;
   images: string[];
+  advertised: boolean;
 };
 
 export const sampleProducts: CatalogProduct[] = [];

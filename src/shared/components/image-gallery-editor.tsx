@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TrashIcon, UploadCloudIcon } from "@/shared/components/icons";
 import { uploadImageFile } from "@/shared/lib/upload-image";
 
@@ -17,6 +18,7 @@ export function ImageGalleryEditor({
   uploadKind = "product",
   max = 8,
 }: ImageGalleryEditorProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,26 +45,26 @@ export function ImageGalleryEditor({
       if (max === 1) onChange(uploaded.slice(0, 1));
       else onChange([...images, ...uploaded]);
     } catch {
-      setError("Unable to reach upload service.");
+      setError(t("common.uploadUnreachable"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
         {images.map((src) => (
           <div
             key={src}
-            className="group relative aspect-square overflow-hidden rounded-md border border-border"
+            className="group relative size-20 shrink-0 overflow-hidden rounded-md border border-border sm:size-24"
           >
             <img src={src} alt="" className="size-full object-cover" />
             <button
               type="button"
-              aria-label="Remove image"
+              aria-label={t("common.removeImage")}
               onClick={() => onChange(images.filter((item) => item !== src))}
-              className="absolute top-1.5 right-1.5 rounded bg-black/70 p-1 text-danger opacity-0 transition-opacity group-hover:opacity-100"
+              className="absolute top-1 right-1 rounded bg-black/70 p-1 text-danger opacity-0 transition-opacity group-hover:opacity-100"
             >
               <TrashIcon className="size-3.5" />
             </button>
@@ -70,13 +72,13 @@ export function ImageGalleryEditor({
         ))}
         {max === 1 || images.length < max ? (
           <label
-            className={`flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background text-muted hover:border-accent/50 hover:text-accent ${
+            className={`flex size-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background text-muted hover:border-accent/50 hover:text-accent sm:size-24 ${
               busy ? "pointer-events-none opacity-60" : ""
             }`}
           >
             <UploadCloudIcon className="size-5" />
             <span className="text-[10px] tracking-wide uppercase">
-              {busy ? "…" : "Add"}
+              {busy ? "…" : t("common.add")}
             </span>
             <input
               type="file"
@@ -94,7 +96,7 @@ export function ImageGalleryEditor({
       </div>
       {error ? <p className="text-[11px] text-danger">{error}</p> : null}
       <p className="text-[11px] text-muted">
-        Up to {max} images. First image is used as the thumbnail.
+        {t("common.galleryHint", { max })}
       </p>
     </div>
   );

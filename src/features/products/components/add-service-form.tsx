@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDownIcon, ChevronRightIcon } from "@/shared/components/icons";
 import { ImageGalleryEditor } from "@/shared/components/image-gallery-editor";
 import { SERVICE_CATEGORIES } from "../data/categories";
@@ -13,6 +14,7 @@ const inputClass =
   "w-full rounded-md border border-border bg-background px-3 py-2.5 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-accent/50";
 
 export function AddServiceForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [sku, setSku] = useState("");
@@ -20,6 +22,7 @@ export function AddServiceForm() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<CatalogStatus>("Active");
   const [images, setImages] = useState<string[]>([]);
+  const [advertised, setAdvertised] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,17 +41,18 @@ export function AddServiceForm() {
           description,
           status,
           images,
+          advertised,
         }),
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setError(data.error ?? "Unable to create service.");
+        setError(data.error ?? t("products.createServiceFailed"));
         return;
       }
       router.push("/products?tab=services");
       router.refresh();
     } catch {
-      setError("Unable to reach catalog service.");
+      setError(t("products.catalogUnreachable"));
     } finally {
       setBusy(false);
     }
@@ -58,40 +62,51 @@ export function AddServiceForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <nav className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] tracking-wide text-muted uppercase">
         <Link href="/products" className="hover:text-foreground">
-          Products
+          {t("products.productsTab")}
         </Link>
         <ChevronRightIcon className="size-3.5" />
         <Link href="/products?tab=services" className="hover:text-foreground">
-          Services
+          {t("products.servicesTab")}
         </Link>
         <ChevronRightIcon className="size-3.5" />
-        <span className="text-accent">New Service</span>
+        <span className="text-accent">{t("products.newService")}</span>
       </nav>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <h1 className="text-[28px] font-semibold tracking-tight">
-          Add New Service
+          {t("products.addService")}
         </h1>
         <div className="flex items-center gap-2">
           <Link
             href="/products?tab=services"
             className="inline-flex h-9 items-center rounded-md border border-border px-4 text-[13px]"
           >
-            Cancel
+            {t("common.cancel")}
           </Link>
           <button
             type="submit"
             disabled={busy}
             className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-[13px] font-semibold text-black disabled:opacity-60"
           >
-            {busy ? "Saving…" : "Save Service"}
+            {busy ? t("common.saving") : t("products.saveService")}
           </button>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section className="space-y-4 rounded-lg border border-border bg-surface p-5">
-          <Field label="Service Title">
+          <div>
+            <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">
+              {t("products.serviceImages")}
+            </p>
+            <ImageGalleryEditor
+              images={images}
+              onChange={setImages}
+              uploadKind="service"
+            />
+          </div>
+
+          <Field label={t("products.serviceTitle")}>
             <input
               required
               value={title}
@@ -101,7 +116,7 @@ export function AddServiceForm() {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="SKU">
+            <Field label={t("products.sku")}>
               <input
                 required
                 value={sku}
@@ -110,7 +125,7 @@ export function AddServiceForm() {
                 placeholder="SVC-FIELD-24"
               />
             </Field>
-            <Field label="Category">
+            <Field label={t("products.category")}>
               <span className="relative block">
                 <select
                   value={category}
@@ -121,7 +136,7 @@ export function AddServiceForm() {
                 >
                   {SERVICE_CATEGORIES.map((cat) => (
                     <option key={cat.value} value={cat.value}>
-                      {cat.label}
+                      {t(`products.categories.${cat.value}`)}
                     </option>
                   ))}
                 </select>
@@ -129,7 +144,7 @@ export function AddServiceForm() {
               </span>
             </Field>
           </div>
-          <Field label="Description">
+          <Field label={t("products.description")}>
             <textarea
               rows={5}
               value={description}
@@ -141,26 +156,36 @@ export function AddServiceForm() {
         </section>
 
         <section className="space-y-4 rounded-lg border border-border bg-surface p-5">
-          <Field label="Status">
+          <Field label={t("products.status")}>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as CatalogStatus)}
-              className={inputClass}
+              className={`${inputClass} font-semibold ${
+                status === "Active"
+                  ? "border-success/50 bg-success-soft text-success"
+                  : "border-danger/50 bg-danger-soft text-danger"
+              }`}
             >
-              <option value="Active">Active</option>
-              <option value="Draft">Draft</option>
+              <option value="Active">{t("common.active")}</option>
+              <option value="Draft">{t("common.draft")}</option>
             </select>
           </Field>
-          <div>
-            <p className="mb-2 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">
-              Service Images
-            </p>
-            <ImageGalleryEditor
-              images={images}
-              onChange={setImages}
-              uploadKind="service"
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border bg-background px-3 py-3">
+            <input
+              type="checkbox"
+              checked={advertised}
+              onChange={(e) => setAdvertised(e.target.checked)}
+              className="mt-0.5 size-4 accent-[var(--accent)]"
             />
-          </div>
+            <span>
+              <span className="block text-[13px] font-medium text-foreground normal-case tracking-normal">
+                {t("products.advertisementPutOn")}
+              </span>
+              <span className="mt-0.5 block text-[12px] font-normal text-muted normal-case tracking-normal">
+                {t("products.advertisementHint")}
+              </span>
+            </span>
+          </label>
         </section>
       </div>
 

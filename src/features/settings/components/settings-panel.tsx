@@ -3,7 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AuthSession, UserRole } from "@/features/auth/types";
-import { ROLE_PERMISSIONS, roleLabel } from "@/features/auth/types";
+import {
+  ROLE_PERMISSIONS,
+  canBlockUser,
+  roleLabel,
+} from "@/features/auth/types";
 import {
   ChevronDownIcon,
   KeyIcon,
@@ -28,6 +32,8 @@ const inputClass =
 export function SettingsPanel({ session }: { session: AuthSession }) {
   const { t } = useTranslation();
   const canInvite = session.role === "super_admin";
+  const canManageUsers =
+    canInvite || ROLE_PERMISSIONS[session.role].canBlockAdmins;
   const { query } = useSearchQuery();
 
   const [fullName, setFullName] = useState(session.name);
@@ -45,18 +51,18 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<UserRole>("super_admin");
+  const [inviteRole, setInviteRole] = useState<UserRole>("admin");
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
-  const [lastPassword, setLastPassword] = useState<string | null>(null);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userActionId, setUserActionId] = useState<string | null>(null);
   const [userFilter, setUserFilter] = useState("");
 
   async function loadUsers() {
-    if (!canInvite) return;
+    if (!canManageUsers) return;
     setLoadingUsers(true);
     try {
       const res = await fetch("/api/users");
@@ -69,7 +75,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
   useEffect(() => {
     void loadUsers();
-  }, [canInvite]);
+  }, [canManageUsers]);
 
   const filteredUsers = useMemo(() => {
     const q = (userFilter.trim() || query.trim()).toLowerCase();
@@ -99,14 +105,14 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setProfileError(data.error ?? "Unable to update profile.");
+        setProfileError(data.error ?? t("settings.profileUpdateFailed"));
         return false;
       }
-      setProfileMessage("Profile updated.");
+      setProfileMessage(t("settings.profileUpdated"));
       window.dispatchEvent(new Event("auth-profile-updated"));
       return true;
     } catch {
-      setProfileError("Unable to reach profile service.");
+      setProfileError(t("settings.profileUnreachable"));
       return false;
     } finally {
       setProfileBusy(false);
@@ -130,12 +136,12 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
     setPasswordMessage(null);
 
     if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters.");
+      setPasswordError(t("settings.passwordTooShort"));
       setPasswordBusy(false);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("New password and confirmation do not match.");
+      setPasswordError(t("settings.passwordMismatch"));
       setPasswordBusy(false);
       return;
     }
@@ -148,15 +154,15 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setPasswordError(data.error ?? "Unable to update password.");
+        setPasswordError(data.error ?? t("settings.passwordUpdateFailed"));
       } else {
-        setPasswordMessage("Password updated successfully.");
+        setPasswordMessage(t("settings.passwordUpdated"));
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       }
     } catch {
-      setPasswordError("Unable to reach auth service.");
+      setPasswordError(t("settings.authUnreachable"));
     } finally {
       setPasswordBusy(false);
     }
@@ -167,7 +173,6 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
     setInviteBusy(true);
     setInviteError(null);
     setInviteMessage(null);
-    setLastPassword(null);
 
     try {
       const res = await fetch("/api/users/invite", {
@@ -183,46 +188,115 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
         error?: string;
         emailSent?: boolean;
         emailReason?: string;
-        temporaryPassword?: string;
       };
 
       if (!res.ok) {
-        setInviteError(data.error ?? "Invitation failed.");
+        setInviteError(data.error ?? t("settings.inviteFailed"));
         return;
       }
 
-      setLastPassword(data.temporaryPassword ?? null);
       if (data.emailSent) {
-        setInviteMessage(
-          "Invitation emailed with login credentials (including temporary password). A copy is shown below as a backup.",
-        );
+        setInviteMessage(t("settings.inviteEmailed"));
         setInviteError(null);
       } else {
-        setInviteMessage(
-          "Account created. Copy the temporary password below and share it securely.",
-        );
+        setInviteMessage(t("settings.inviteCreatedNoEmail"));
         setInviteError(
-          data.emailReason ??
-            "Invite email was not sent. Check Supabase Auth → Email settings.",
+          data.emailReason ?? t("settings.inviteEmailNotSent"),
         );
       }
       setInviteName("");
       setInviteEmail("");
       await loadUsers();
     } catch {
-      setInviteError("Unable to dispatch invitation.");
+      setInviteError(t("settings.inviteUnreachable"));
     } finally {
       setInviteBusy(false);
     }
   }
 
   async function revokeInvite(id: string) {
-    const res = await fetch("/api/users", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    if (res.ok) await loadUsers();
+    setUserActionId(id);
+    try {
+      const res = await fetch("/api/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) await loadUsers();
+    } finally {
+      setUserActionId(null);
+    }
+  }
+
+  async function setUserBlocked(user: AdminUser, blocked: boolean) {
+    setUserActionId(user.id);
+    try {
+      const res = await fetch("/api/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          status: blocked ? "suspended" : "active",
+        }),
+      });
+      if (res.ok) await loadUsers();
+    } finally {
+      setUserActionId(null);
+    }
+  }
+
+  function renderUserActions(user: AdminUser) {
+    const busy = userActionId === user.id;
+    const actions: React.ReactNode[] = [];
+
+    if (
+      canInvite &&
+      user.status === "invited" &&
+      user.id !== session.id
+    ) {
+      actions.push(
+        <button
+          key="revoke"
+          type="button"
+          disabled={busy}
+          onClick={() => void revokeInvite(user.id)}
+          className="font-mono text-[11px] font-semibold tracking-wide text-danger uppercase hover:underline disabled:opacity-60"
+        >
+          {t("settings.revoke")}
+        </button>,
+      );
+    }
+
+    if (
+      user.id !== session.id &&
+      canBlockUser(session.role, user.role) &&
+      (user.status === "active" ||
+        user.status === "suspended" ||
+        user.status === "invited")
+    ) {
+      const blocked = user.status === "suspended";
+      actions.push(
+        <button
+          key="block"
+          type="button"
+          disabled={busy}
+          onClick={() => void setUserBlocked(user, !blocked)}
+          className={`font-mono text-[11px] font-semibold tracking-wide uppercase hover:underline disabled:opacity-60 ${
+            blocked ? "text-success" : "text-danger"
+          }`}
+        >
+          {blocked ? t("settings.unblock") : t("settings.block")}
+        </button>,
+      );
+    }
+
+    if (actions.length === 0) {
+      return (
+        <span className="font-mono text-[11px] text-muted">—</span>
+      );
+    }
+
+    return <div className="flex flex-wrap items-center gap-3">{actions}</div>;
   }
 
   return (
@@ -261,7 +335,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 className={inputClass}
-                placeholder="Your name"
+                placeholder={t("settings.placeholderName")}
               />
             </Field>
             <p className="text-[12px] text-muted">{session.email}</p>
@@ -355,181 +429,172 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
               </h3>
             </div>
             <p className="mb-6 text-[13px] text-muted">
-              {t("settings.adminAccessHint")}
+              {canInvite
+                ? t("settings.adminAccessHint")
+                : t("settings.adminBlockHint")}
             </p>
 
             {canInvite ? (
-              <>
-                <form onSubmit={handleInvite} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label={t("settings.fullName")}>
-                      <input
-                        required
-                        value={inviteName}
-                        onChange={(e) => setInviteName(e.target.value)}
-                        className={inputClass}
-                        placeholder="John Doe"
-                      />
-                    </Field>
-                    <Field label={t("settings.email")}>
-                      <input
-                        required
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        className={inputClass}
-                        placeholder="j.doe@etiel.com"
-                      />
-                    </Field>
-                  </div>
-
-                  <Field label={t("settings.role")}>
-                    <span className="relative block">
-                      <select
-                        value={inviteRole}
-                        onChange={(e) =>
-                          setInviteRole(e.target.value as UserRole)
-                        }
-                        className={`${inputClass} appearance-none pr-9`}
-                      >
-                        <option value="super_admin">Super Admin</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted" />
-                    </span>
-                  </Field>
-
-                  {inviteError ? (
-                    <p className="text-[12px] text-danger">{inviteError}</p>
-                  ) : null}
-                  {inviteMessage ? (
-                    <p className="text-[12px] text-success">{inviteMessage}</p>
-                  ) : null}
-                  {lastPassword ? (
-                    <p className="rounded-md border border-border bg-background px-3 py-2 font-mono text-[12px] text-accent">
-                      Temporary password: {lastPassword}
-                    </p>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={inviteBusy}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
-                  >
-                    {inviteBusy
-                      ? t("settings.dispatching")
-                      : t("settings.dispatch")}
-                    {!inviteBusy ? <SendIcon className="size-4" /> : null}
-                  </button>
-                </form>
-
-                <div className="mt-8">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
-                      {t("settings.users")}
-                    </p>
+              <form onSubmit={handleInvite} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label={t("settings.fullName")}>
                     <input
-                      type="search"
-                      value={userFilter}
-                      onChange={(e) => setUserFilter(e.target.value)}
-                      placeholder={t("settings.searchUsers")}
-                      className="h-8 w-full max-w-[220px] rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
+                      required
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      className={inputClass}
+                      placeholder={t("settings.placeholderInviteName")}
                     />
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[520px] border-collapse text-left">
-                      <thead>
-                        <tr className="border-b border-border">
-                          {[
-                            t("settings.name"),
-                            t("login.email"),
-                            t("settings.role"),
-                            t("settings.status"),
-                            t("settings.action"),
-                          ].map(
-                            (heading) => (
-                              <th
-                                key={heading}
-                                className="px-1 py-2.5 font-mono text-[10px] font-medium tracking-[0.08em] text-muted uppercase"
-                              >
-                                {heading}
-                              </th>
-                            ),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {loadingUsers ? (
-                          <tr>
-                            <td
-                              colSpan={5}
-                              className="px-1 py-4 text-[12px] text-muted"
-                            >
-                              Loading…
-                            </td>
-                          </tr>
-                        ) : filteredUsers.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan={5}
-                              className="px-1 py-4 text-[12px] text-muted"
-                            >
-                              {t("settings.noUsers")}
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredUsers.map((user) => (
-                            <tr
-                              key={user.id}
-                              className="border-b border-border last:border-b-0"
-                            >
-                              <td className="px-1 py-3.5 text-[13px] text-foreground">
-                                {user.full_name}
-                              </td>
-                              <td className="px-1 py-3.5 font-mono text-[12px] text-muted-strong">
-                                {user.email}
-                              </td>
-                              <td className="px-1 py-3.5">
-                                <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
-                                  {roleLabel(user.role)}
-                                </span>
-                              </td>
-                              <td className="px-1 py-3.5 font-mono text-[11px] tracking-wide text-muted uppercase">
-                                {user.status}
-                              </td>
-                              <td className="px-1 py-3.5">
-                                {user.status === "invited" &&
-                                user.id !== session.id ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void revokeInvite(user.id)}
-                                    className="font-mono text-[11px] font-semibold tracking-wide text-danger uppercase hover:underline"
-                                  >
-                                    {t("settings.revoke")}
-                                  </button>
-                                ) : (
-                                  <span className="font-mono text-[11px] text-muted">
-                                    —
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  </Field>
+                  <Field label={t("settings.email")}>
+                    <input
+                      required
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className={inputClass}
+                      placeholder="j.doe@etiel.com"
+                    />
+                  </Field>
                 </div>
-              </>
+
+                <Field label={t("settings.role")}>
+                  <span className="relative block">
+                    <select
+                      value={inviteRole}
+                      onChange={(e) =>
+                        setInviteRole(e.target.value as UserRole)
+                      }
+                      className={`${inputClass} appearance-none pr-9`}
+                    >
+                      <option value="admin">{t("settings.roleAdmin")}</option>
+                      <option value="super_admin">
+                        {t("settings.roleSuperAdmin")}
+                      </option>
+                    </select>
+                    <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted" />
+                  </span>
+                </Field>
+
+                {inviteError ? (
+                  <p className="text-[12px] text-danger">{inviteError}</p>
+                ) : null}
+                {inviteMessage ? (
+                  <p className="text-[12px] text-success">{inviteMessage}</p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={inviteBusy}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-[13px] font-semibold tracking-wide text-black uppercase disabled:opacity-60"
+                >
+                  {inviteBusy
+                    ? t("settings.dispatching")
+                    : t("settings.dispatch")}
+                  {!inviteBusy ? <SendIcon className="size-4" /> : null}
+                </button>
+              </form>
+            ) : null}
+
+            {canManageUsers ? (
+              <div className={canInvite ? "mt-8" : undefined}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-mono text-[11px] tracking-[0.1em] text-accent uppercase">
+                    {t("settings.users")}
+                  </p>
+                  <input
+                    type="search"
+                    value={userFilter}
+                    onChange={(e) => setUserFilter(e.target.value)}
+                    placeholder={t("settings.searchUsers")}
+                    className="h-8 w-full max-w-[220px] rounded-md border border-border bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
+                  />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[520px] border-collapse text-left">
+                    <thead>
+                      <tr className="border-b border-border">
+                        {[
+                          t("settings.name"),
+                          t("login.email"),
+                          t("settings.role"),
+                          t("settings.status"),
+                          t("settings.action"),
+                        ].map((heading) => (
+                          <th
+                            key={heading}
+                            className="px-1 py-2.5 font-mono text-[10px] font-medium tracking-[0.08em] text-muted uppercase"
+                          >
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingUsers ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-1 py-4 text-[12px] text-muted"
+                          >
+                            {t("common.loading")}
+                          </td>
+                        </tr>
+                      ) : filteredUsers.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="px-1 py-4 text-[12px] text-muted"
+                          >
+                            {t("settings.noUsers")}
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUsers.map((user) => (
+                          <tr
+                            key={user.id}
+                            className="border-b border-border last:border-b-0"
+                          >
+                            <td className="px-1 py-3.5 text-[13px] text-foreground">
+                              {user.full_name}
+                            </td>
+                            <td className="px-1 py-3.5 font-mono text-[12px] text-muted-strong">
+                              {user.email}
+                            </td>
+                            <td className="px-1 py-3.5">
+                              <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
+                                {user.role === "super_admin"
+                                  ? t("settings.roleSuperAdmin")
+                                  : t("settings.roleAdmin")}
+                              </span>
+                            </td>
+                            <td className="px-1 py-3.5 font-mono text-[11px] tracking-wide text-muted uppercase">
+                              {user.status === "suspended"
+                                ? t("settings.statusSuspended")
+                                : user.status === "invited"
+                                  ? t("settings.statusInvited")
+                                  : t("settings.statusActive")}
+                            </td>
+                            <td className="px-1 py-3.5">
+                              {renderUserActions(user)}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
               <div className="rounded-md border border-border bg-background px-4 py-5">
                 <p className="text-[13px] text-muted">
-                  Signed in as{" "}
-                  <span className="text-accent">
-                    {ROLE_PERMISSIONS[session.role].label}
-                  </span>
-                  . Only a Super Admin can dispatch invitations and manage
-                  users.
+                  {t("settings.inviteOnlySuperAdmin", {
+                    role: t(
+                      session.role === "super_admin"
+                        ? "settings.roleSuperAdmin"
+                        : "settings.roleAdmin",
+                    ),
+                  })}
                 </p>
               </div>
             )}

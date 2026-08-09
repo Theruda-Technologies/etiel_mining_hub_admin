@@ -1,17 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FilterLinesIcon } from "@/shared/components/icons";
+import { FilterLinesIcon, ImageOffIcon } from "@/shared/components/icons";
 import { useSearchQuery } from "@/shared/components/search-context";
 import { cn } from "@/shared/utils";
-import {
-  PRODUCT_CATEGORIES,
-  SERVICE_CATEGORIES,
-  productCategoryLabel,
-  serviceCategoryLabel,
-} from "../data/categories";
+import { PRODUCT_CATEGORIES, SERVICE_CATEGORIES } from "../data/categories";
 import {
   sampleProducts,
   sampleServices,
@@ -19,8 +15,6 @@ import {
   type CatalogService,
   type CatalogStatus,
 } from "../data/catalog";
-import { ProductCard } from "./product-card";
-import { ServiceCard } from "./service-card";
 
 type Tab = "products" | "services";
 
@@ -30,37 +24,35 @@ type CatalogManagerProps = {
   initialServices?: CatalogService[];
 };
 
+function statusClass(status: CatalogStatus) {
+  return status === "Active"
+    ? "border-success/50 bg-success-soft text-success"
+    : "border-danger/50 bg-danger-soft text-danger";
+}
+
 export function CatalogManager({
   initialTab = "products",
   initialProducts = sampleProducts,
   initialServices = sampleServices,
 }: CatalogManagerProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const { query } = useSearchQuery();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [products, setProducts] = useState(initialProducts);
   const [services, setServices] = useState(initialServices);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CatalogStatus>("all");
-  const productTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-  const serviceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-  const pendingProductPatches = useRef<
-    Map<string, Partial<CatalogProduct>>
-  >(new Map());
-  const pendingServicePatches = useRef<
-    Map<string, Partial<CatalogService>>
-  >(new Map());
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [clearingAd, setClearingAd] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      productTimers.current.forEach(clearTimeout);
-      serviceTimers.current.forEach(clearTimeout);
-    };
-  }, []);
+  const advertisement = useMemo(() => {
+    const product = products.find((item) => item.advertised);
+    if (product) return { kind: "product" as const, item: product };
+    const service = services.find((item) => item.advertised);
+    if (service) return { kind: "service" as const, item: service };
+    return null;
+  }, [products, services]);
 
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,10 +68,10 @@ export function CatalogManager({
         product.title.toLowerCase().includes(q) ||
         product.sku.toLowerCase().includes(q) ||
         product.description.toLowerCase().includes(q) ||
-        productCategoryLabel(product.category).toLowerCase().includes(q)
+        t(`products.categories.${product.category}`).toLowerCase().includes(q)
       );
     });
-  }, [products, query, categoryFilter, statusFilter]);
+  }, [products, query, categoryFilter, statusFilter, t]);
 
   const filteredServices = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,89 +87,75 @@ export function CatalogManager({
         service.title.toLowerCase().includes(q) ||
         service.sku.toLowerCase().includes(q) ||
         service.description.toLowerCase().includes(q) ||
-        serviceCategoryLabel(service.category).toLowerCase().includes(q)
+        t(`products.categories.${service.category}`).toLowerCase().includes(q)
       );
     });
-  }, [services, query, categoryFilter, statusFilter]);
-
-  function updateProductLocal(id: string, patch: Partial<CatalogProduct>) {
-    setProducts((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
-    const merged = {
-      ...(pendingProductPatches.current.get(id) ?? {}),
-      ...patch,
-    };
-    pendingProductPatches.current.set(id, merged);
-    const existing = productTimers.current.get(id);
-    if (existing) clearTimeout(existing);
-    productTimers.current.set(
-      id,
-      setTimeout(() => {
-        const body = pendingProductPatches.current.get(id);
-        pendingProductPatches.current.delete(id);
-        if (!body) return;
-        void fetch("/api/catalog/products", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, patch: body }),
-        });
-      }, 450),
-    );
-  }
-
-  function updateServiceLocal(id: string, patch: Partial<CatalogService>) {
-    setServices((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
-    const merged = {
-      ...(pendingServicePatches.current.get(id) ?? {}),
-      ...patch,
-    };
-    pendingServicePatches.current.set(id, merged);
-    const existing = serviceTimers.current.get(id);
-    if (existing) clearTimeout(existing);
-    serviceTimers.current.set(
-      id,
-      setTimeout(() => {
-        const body = pendingServicePatches.current.get(id);
-        pendingServicePatches.current.delete(id);
-        if (!body) return;
-        void fetch("/api/catalog/services", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id, patch: body }),
-        });
-      }, 450),
-    );
-  }
-
-  async function deleteProductLocal(id: string) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    await fetch("/api/catalog/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-  }
-
-  async function deleteServiceLocal(id: string) {
-    setServices((prev) => prev.filter((s) => s.id !== id));
-    await fetch("/api/catalog/services", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-  }
+  }, [services, query, categoryFilter, statusFilter, t]);
 
   const categoryOptions =
     tab === "products" ? PRODUCT_CATEGORIES : SERVICE_CATEGORIES;
+
+  async function deleteProduct(id: string) {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/catalog/products", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setProducts((prev) => prev.filter((item) => item.id !== id));
+        router.refresh();
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteService(id: string) {
+    setBusyId(id);
+    try {
+      const res = await fetch("/api/catalog/services", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        setServices((prev) => prev.filter((item) => item.id !== id));
+        router.refresh();
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function clearAdvertisement() {
+    setClearingAd(true);
+    try {
+      const res = await fetch("/api/catalog/advertisement", {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((item) => ({ ...item, advertised: false })),
+        );
+        setServices((prev) =>
+          prev.map((item) => ({ ...item, advertised: false })),
+        );
+        router.refresh();
+      }
+    } finally {
+      setClearingAd(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-[15px] font-semibold text-accent">{t("products.adminHub")}</p>
+          <p className="text-[15px] font-semibold text-accent">
+            {t("products.adminHub")}
+          </p>
           <h1 className="font-display mt-1 text-[28px] font-bold tracking-tight text-foreground">
             {t("products.title")}
           </h1>
@@ -202,6 +180,72 @@ export function CatalogManager({
         </div>
       </div>
 
+      <section className="rounded-lg border border-border bg-surface p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground">
+              {t("products.advertisement")}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-muted">
+              {t("products.advertisementHint")}
+            </p>
+          </div>
+        </div>
+        {advertisement ? (
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="size-16 shrink-0 overflow-hidden rounded-md border border-border bg-background">
+              {advertisement.item.images[0] ? (
+                <img
+                  src={advertisement.item.images[0]}
+                  alt={advertisement.item.title}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center text-muted">
+                  <ImageOffIcon className="size-5" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-medium text-foreground">
+                {advertisement.item.title}
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted">
+                {advertisement.kind === "product"
+                  ? t("products.advertisementTypeProduct")
+                  : t("products.advertisementTypeService")}
+                {" · "}
+                {t(`products.categories.${advertisement.item.category}`)}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={
+                  advertisement.kind === "product"
+                    ? `/products/${advertisement.item.id}`
+                    : `/products/services/${advertisement.item.id}`
+                }
+                className="inline-flex h-8 items-center rounded-md border border-border px-3 text-[12px] font-medium text-foreground hover:border-accent/50 hover:text-accent"
+              >
+                {t("products.edit")}
+              </Link>
+              <button
+                type="button"
+                disabled={clearingAd}
+                onClick={() => void clearAdvertisement()}
+                className="inline-flex h-8 items-center rounded-md border border-danger/60 px-3 text-[12px] font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
+              >
+                {t("products.advertisementRemove")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[13px] text-muted">
+            {t("products.advertisementEmpty")}
+          </p>
+        )}
+      </section>
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
           <FilterLinesIcon className="size-3.5" />
@@ -215,7 +259,7 @@ export function CatalogManager({
           <option value="all">{t("products.allCategories")}</option>
           {categoryOptions.map((cat) => (
             <option key={cat.value} value={cat.value}>
-              {cat.label}
+              {t(`products.categories.${cat.value}`)}
             </option>
           ))}
         </select>
@@ -268,31 +312,152 @@ export function CatalogManager({
         filteredProducts.length === 0 ? (
           <p className="text-[13px] text-muted">{t("products.noProducts")}</p>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onChange={(patch) => void updateProductLocal(product.id, patch)}
-                onDelete={() => void deleteProductLocal(product.id)}
-              />
-            ))}
-          </div>
+          <CatalogListTable
+            rows={filteredProducts.map((product) => ({
+              id: product.id,
+              href: `/products/${product.id}`,
+              title: product.title,
+              image: product.images[0],
+              category: product.category,
+              status: product.status,
+            }))}
+            busyId={busyId}
+            onDelete={(id) => void deleteProduct(id)}
+          />
         )
       ) : filteredServices.length === 0 ? (
         <p className="text-[13px] text-muted">{t("products.noServices")}</p>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              onChange={(patch) => void updateServiceLocal(service.id, patch)}
-              onDelete={() => void deleteServiceLocal(service.id)}
-            />
-          ))}
-        </div>
+        <CatalogListTable
+          rows={filteredServices.map((service) => ({
+            id: service.id,
+            href: `/products/services/${service.id}`,
+            title: service.title,
+            image: service.images[0],
+            category: service.category,
+            status: service.status,
+          }))}
+          busyId={busyId}
+          onDelete={(id) => void deleteService(id)}
+        />
       )}
+    </div>
+  );
+}
+
+type CatalogListRow = {
+  id: string;
+  href: string;
+  title: string;
+  image?: string;
+  category: string;
+  status: CatalogStatus;
+};
+
+function CatalogListTable({
+  rows,
+  busyId,
+  onDelete,
+}: {
+  rows: CatalogListRow[];
+  busyId: string | null;
+  onDelete: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const router = useRouter();
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <table className="w-full min-w-[720px] border-collapse text-left">
+        <thead>
+          <tr className="border-b border-border">
+            {[
+              t("products.image"),
+              t("products.name"),
+              t("products.category"),
+              t("products.status"),
+              t("settings.action"),
+            ].map((heading) => (
+              <th
+                key={heading}
+                className="px-4 py-3 font-mono text-[10px] font-medium tracking-[0.08em] text-muted uppercase"
+              >
+                {heading}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.id}
+              role="link"
+              tabIndex={0}
+              onClick={() => router.push(row.href)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  router.push(row.href);
+                }
+              }}
+              className="cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-white/[0.02]"
+            >
+              <td className="px-4 py-3">
+                <div className="size-14 overflow-hidden rounded-md border border-border bg-background">
+                  {row.image ? (
+                    <img
+                      src={row.image}
+                      alt={row.title}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center text-muted">
+                      <ImageOffIcon className="size-5" />
+                    </div>
+                  )}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-[14px] font-medium text-foreground">
+                {row.title}
+              </td>
+              <td className="px-4 py-3 text-[13px] text-muted-strong">
+                {t(`products.categories.${row.category}`)}
+              </td>
+              <td className="px-4 py-3">
+                <span
+                  className={`inline-flex rounded-md border px-2.5 py-1 text-[11px] font-semibold ${statusClass(row.status)}`}
+                >
+                  {row.status === "Active"
+                    ? t("common.active")
+                    : t("common.draft")}
+                </span>
+              </td>
+              <td
+                className="px-4 py-3"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={row.href}
+                    className="inline-flex h-8 items-center rounded-md border border-border px-3 text-[12px] font-medium text-foreground hover:border-accent/50 hover:text-accent"
+                  >
+                    {t("products.edit")}
+                  </Link>
+                  <button
+                    type="button"
+                    disabled={busyId === row.id}
+                    onClick={() => onDelete(row.id)}
+                    className="inline-flex h-8 items-center rounded-md border border-danger/60 px-3 text-[12px] font-medium text-danger hover:bg-danger-soft disabled:opacity-60"
+                  >
+                    {t("common.delete")}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

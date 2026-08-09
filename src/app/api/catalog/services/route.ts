@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     description?: string;
     status?: "Active" | "Draft";
     images?: string[];
+    advertised?: boolean;
   };
 
   if (!body.title?.trim() || !body.sku?.trim()) {
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     description: body.description,
     status: body.status,
     images: body.images,
+    advertised: body.advertised,
   });
 
   if (error) {

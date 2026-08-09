@@ -24,8 +24,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createAuthClient();
   const [ordersRes, productsRes, servicesRes] = await Promise.all([
     supabase.from("orders").select("id, status", { count: "exact" }),
-    supabase.from("products").select("id", { count: "exact", head: true }),
-    supabase.from("services").select("id", { count: "exact", head: true }),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
+    supabase
+      .from("services")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
   ]);
 
   const list = ordersRes.data ?? [];

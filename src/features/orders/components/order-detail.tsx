@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CartCheckIcon,
   ChevronDownIcon,
@@ -19,12 +20,22 @@ type OrderDetailViewProps = {
   order: OrderDetail;
 };
 
+const statusI18nKey: Record<OrderStatus, string> = {
+  Pending: "common.pending",
+  Confirmed: "common.confirmed",
+  Processing: "common.processing",
+  Shipped: "common.shipped",
+  Cancelled: "common.cancelled",
+};
+
 export function OrderDetailView({ order }: OrderDetailViewProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [status, setStatus] = useState<OrderStatus>(order.status);
   const [internalNotes, setInternalNotes] = useState(order.internalNotes);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveOk, setSaveOk] = useState(false);
 
   useEffect(() => {
     setStatus(order.status);
@@ -36,7 +47,6 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
       order.status,
       ...order.allowedNextStatuses,
     ]);
-    // Keep the currently selected value visible even before refresh
     options.add(status);
     return Array.from(options);
   }, [order.status, order.allowedNextStatuses, status]);
@@ -46,6 +56,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
   async function handleSave() {
     setSaving(true);
     setSaveMessage(null);
+    setSaveOk(false);
     try {
       const res = await fetch("/api/orders", {
         method: "PATCH",
@@ -58,13 +69,14 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
-        setSaveMessage(data.error ?? "Save failed.");
+        setSaveMessage(data.error ?? t("orders.saveFailed"));
       } else {
-        setSaveMessage("Changes saved.");
+        setSaveMessage(t("orders.changesSaved"));
+        setSaveOk(true);
         router.refresh();
       }
     } catch {
-      setSaveMessage("Unable to save changes.");
+      setSaveMessage(t("orders.saveUnreachable"));
     } finally {
       setSaving(false);
     }
@@ -76,11 +88,11 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
         <div>
           <nav className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
             <Link href="/dashboard" className="hover:text-foreground">
-              Dashboard
+              {t("nav.dashboard")}
             </Link>
             <ChevronRightIcon className="size-3.5" />
             <Link href="/orders" className="hover:text-foreground">
-              Orders
+              {t("nav.orders")}
             </Link>
             <ChevronRightIcon className="size-3.5" />
             <span className="font-mono text-muted-strong">#{order.id}</span>
@@ -88,7 +100,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
 
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[28px] font-semibold tracking-tight text-foreground">
-              Order #{order.id}
+              {t("orders.detailTitle", { id: order.id })}
             </h1>
             <OrderStatusBadge status={status} />
           </div>
@@ -101,7 +113,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             <header className="flex items-center gap-2 border-b border-border px-5 py-4">
               <CartCheckIcon className="size-4 text-accent" />
               <h2 className="text-[15px] font-medium text-foreground">
-                Order Items
+                {t("orders.items")}
               </h2>
             </header>
 
@@ -109,14 +121,16 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
               <table className="w-full min-w-[480px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-border">
-                    {["Item", "SKU", "Qty"].map((heading) => (
-                      <th
-                        key={heading}
-                        className="px-5 py-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase"
-                      >
-                        {heading}
-                      </th>
-                    ))}
+                    {[t("orders.item"), t("orders.sku"), t("orders.qty")].map(
+                      (heading) => (
+                        <th
+                          key={heading}
+                          className="px-5 py-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase"
+                        >
+                          {heading}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -126,7 +140,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                         colSpan={3}
                         className="px-5 py-8 text-center text-[13px] text-muted"
                       >
-                        No line items on this order.
+                        {t("orders.noItems")}
                       </td>
                     </tr>
                   ) : (
@@ -175,30 +189,39 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             <header className="flex items-center gap-2 border-b border-border px-5 py-4">
               <UserIcon className="size-4 text-accent" />
               <h2 className="text-[15px] font-medium text-foreground">
-                Buyer Details
+                {t("orders.buyerDetails")}
               </h2>
             </header>
 
             <div className="grid gap-6 p-5 md:grid-cols-[1fr_1fr_auto]">
               <div>
                 <h3 className="mb-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
-                  Contact Information
+                  {t("orders.contactInfo")}
                 </h3>
                 <dl className="space-y-3 text-[13px]">
-                  <DetailField label="Full Name" value={order.buyer.fullName} />
-                  <DetailField label="Company" value={order.buyer.company} />
                   <DetailField
-                    label="Email"
+                    label={t("orders.fullName")}
+                    value={order.buyer.fullName}
+                  />
+                  <DetailField
+                    label={t("orders.company")}
+                    value={order.buyer.company}
+                  />
+                  <DetailField
+                    label={t("orders.email")}
                     value={order.buyer.email}
                     accent
                   />
-                  <DetailField label="Phone" value={order.buyer.phone} />
+                  <DetailField
+                    label={t("orders.phone")}
+                    value={order.buyer.phone}
+                  />
                 </dl>
               </div>
 
               <div>
                 <h3 className="mb-3 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
-                  Shipping Address
+                  {t("orders.shippingAddress")}
                 </h3>
                 <div className="space-y-1 text-[13px] text-foreground">
                   {order.buyer.shippingAddress.map((line) => (
@@ -208,7 +231,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 {order.notes ? (
                   <div className="mt-4">
                     <h3 className="mb-2 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">
-                      Customer Notes
+                      {t("orders.customerNotes")}
                     </h3>
                     <p className="text-[13px] text-muted-strong">{order.notes}</p>
                   </div>
@@ -229,13 +252,13 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             <header className="flex items-center gap-2 border-b border-border px-5 py-4">
               <GavelIcon className="size-4 text-accent" />
               <h2 className="text-[15px] font-medium text-foreground">
-                Status Management
+                {t("orders.statusManagement")}
               </h2>
             </header>
 
             <div className="flex flex-col gap-4 p-5">
               <label className="flex flex-col gap-2 text-[12px] text-muted">
-                Update Status
+                {t("orders.updateStatus")}
                 <span className="relative">
                   <select
                     value={status}
@@ -247,7 +270,7 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                   >
                     {statusOptions.map((option) => (
                       <option key={option} value={option}>
-                        {option}
+                        {t(statusI18nKey[option])}
                       </option>
                     ))}
                   </select>
@@ -256,21 +279,25 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
               </label>
               {isTerminal ? (
                 <p className="text-[12px] text-muted">
-                  This order is in a final status and cannot be moved further.
+                  {t("orders.finalStatusHint")}
                 </p>
               ) : (
                 <p className="text-[12px] text-muted">
-                  Allowed next:{" "}
-                  {order.allowedNextStatuses.join(", ") || "none"}
+                  {t("orders.allowedNext", {
+                    statuses:
+                      order.allowedNextStatuses
+                        .map((s) => t(statusI18nKey[s]))
+                        .join(", ") || t("orders.none"),
+                  })}
                 </p>
               )}
 
               <label className="flex flex-col gap-2 text-[12px] text-muted">
-                Internal Notes
+                {t("orders.internalNotes")}
                 <textarea
                   value={internalNotes}
                   onChange={(event) => setInternalNotes(event.target.value)}
-                  placeholder="Add administrative notes here..."
+                  placeholder={t("orders.notesPlaceholder")}
                   rows={5}
                   className="resize-none rounded-md border border-border bg-background px-3 py-2.5 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-accent/50"
                 />
@@ -282,14 +309,12 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
                 disabled={saving}
                 className="mt-1 h-10 w-full rounded-md bg-accent text-[13px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
               >
-                {saving ? "Saving…" : "Save Changes"}
+                {saving ? t("common.saving") : t("orders.saveChanges")}
               </button>
               {saveMessage ? (
                 <p
                   className={`text-[12px] ${
-                    saveMessage.includes("saved")
-                      ? "text-success"
-                      : "text-danger"
+                    saveOk ? "text-success" : "text-danger"
                   }`}
                 >
                   {saveMessage}
@@ -302,14 +327,14 @@ export function OrderDetailView({ order }: OrderDetailViewProps) {
             <header className="flex items-center gap-2 border-b border-border px-5 py-4">
               <ClockIcon className="size-4 text-accent" />
               <h2 className="text-[15px] font-medium text-foreground">
-                Timeline
+                {t("orders.timeline")}
               </h2>
             </header>
 
             <ol className="space-y-0 p-5">
               {order.timeline.length === 0 ? (
                 <li className="text-[13px] text-muted">
-                  No timeline events yet.
+                  {t("orders.noTimeline")}
                 </li>
               ) : (
                 order.timeline.map((event, index) => {

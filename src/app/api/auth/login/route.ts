@@ -51,6 +51,8 @@ export async function POST(request: Request) {
       data: {
         ...data.user.user_metadata,
         status: "active",
+        temporary_password: null,
+        password: null,
       },
     });
   }

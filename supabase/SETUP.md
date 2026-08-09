@@ -46,38 +46,46 @@ Only the **Super Admin** can invite users (Settings → Administrative Access):
 
 - Choose role: **Administrator** or **Super Admin**
 - Account is created in Supabase Auth + `profiles`
-- Supabase Auth sends the invite email (`inviteUserByEmail`)
-- The invite email includes the **temporary password** when the Invite template
-  uses `{{ .Data.temporary_password }}` (copy from `supabase/email-templates/invite-user.html`)
-- A temporary password is also shown once in the UI as a backup login
+- The app emails login **email + password** via SMTP (password is not shown in the admin UI)
 
-### Invite email template (required for password in email)
+### SMTP (required for invite emails)
 
-1. Open [Authentication → Emails → Invite user](https://supabase.com/dashboard/project/ccompobtyzjanpcfmhxi/auth/templates)
-2. Set subject to: `Your Etiel Mining Hub access credentials`
-3. Paste the HTML from `supabase/email-templates/invite-user.html`
-4. Save
+Supabase’s built-in mailer cannot reliably send customized invites with a
+password. Configure SMTP in `.env.local` instead (Resend is simplest):
 
-Key template variables:
+1. Sign up at [resend.com](https://resend.com) and create an API key
+2. Add to `.env.local`:
 
-- `{{ .Data.temporary_password }}` — temporary access code
-- `{{ .Data.full_name }}` — invitee name
-- `{{ .Data.role_label }}` — Admin / Super Admin
-- `{{ .Data.login_url }}` — login page URL
-- `{{ .ConfirmationURL }}` — accept-invite link
-- `{{ .Email }}` — invitee email
+```bash
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=re_your_api_key
+SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"
+```
 
-Invite emails use your Supabase project email settings
-(Authentication → Emails). On the free tier, Supabase’s built-in mailer works
-with rate limits. For production, set custom SMTP under
-Project Settings → Authentication → SMTP Settings.
+3. Restart `npm run dev`
+
+`onboarding@resend.dev` works for testing (sends to your Resend account email).
+For production, verify your domain in Resend and use an address on that domain.
+
+If you prefer to configure SMTP inside the Supabase dashboard instead, use the
+same Resend values under **Authentication → SMTP**:
+
+| Field | Value |
+|-------|--------|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | your Resend API key (`re_…`) |
+| Sender email | `onboarding@resend.dev` (or your verified domain) |
 
 ### Role differences
 
 | Role | Access |
 |------|--------|
-| **Super Admin** | Everything + dispatch invitations / revoke pending invites |
-| **Admin** | Dashboard, Orders, Products, Settings (password). Cannot invite |
+| **Super Admin** | Everything + dispatch invitations / revoke pending invites + block Admins |
+| **Admin** | Dashboard, Orders, Products, Settings. Can block/unblock other Admins. Cannot invite |
 
 ## 5. App URL for invite redirects
 

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/features/auth/lib/server";
 import { parseRole, type UserRole } from "@/features/auth/types";
+import {
+  isSmtpConfigured,
+  sendInviteCredentialsEmail,
+} from "@/lib/mail/send-invite-email";
 
 function generatePassword() {
   const alphabet =
@@ -37,6 +41,24 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!isSmtpConfigured()) {
+      return NextResponse.json(
+        {
+          error: [
+            "SMTP is required to email the invite password.",
+            "Add to .env.local (Resend):",
+            "SMTP_HOST=smtp.resend.com",
+            "SMTP_PORT=465",
+            "SMTP_USER=resend",
+            "SMTP_PASS=re_your_api_key",
+            'SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"',
+            "Restart the dev server after saving.",
+          ].join(" "),
+        },
+        { status: 400 },
+      );
+    }
+
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
       new URL(request.url).origin;
@@ -45,16 +67,17 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    // Password must be in `data` at invite time so the Auth email template
-    // can render {{ .Data.temporary_password }} (see supabase/email-templates).
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: loginUrl,
-      data: {
+    // Create the Auth user (no Auth invite mailer — we send credentials via SMTP).
+    const { data, error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: { role },
+      user_metadata: {
         full_name: fullName,
         invited_by: session.id,
         status: "invited",
         role_label: roleLabel,
-        temporary_password: password,
         login_url: loginUrl,
         ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       },
@@ -62,36 +85,7 @@ export async function POST(request: Request) {
 
     if (error || !data.user) {
       return NextResponse.json(
-        {
-          error:
-            error?.message ??
-            "Failed to invite user. Check Supabase Auth email settings.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // Set login password, role; strip temporary_password from stored metadata.
-    const { error: updateError } = await admin.auth.admin.updateUserById(
-      data.user.id,
-      {
-        app_metadata: { role },
-        password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName,
-          invited_by: session.id,
-          status: "invited",
-          role_label: roleLabel,
-          avatar_url: avatarUrl,
-          temporary_password: null,
-        },
-      },
-    );
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
+        { error: error?.message ?? "Failed to create user." },
         { status: 400 },
       );
     }
@@ -111,6 +105,28 @@ export async function POST(request: Request) {
         .eq("id", data.user.id);
     }
 
+    const mail = await sendInviteCredentialsEmail({
+      to: email,
+      fullName,
+      roleLabel,
+      password,
+      loginUrl,
+    });
+
+    if (!mail.sent) {
+      return NextResponse.json({
+        user: {
+          id: data.user.id,
+          email,
+          fullName,
+          role: role as UserRole,
+          avatarUrl,
+        },
+        emailSent: false,
+        emailReason: mail.error,
+      });
+    }
+
     return NextResponse.json({
       user: {
         id: data.user.id,
@@ -120,7 +136,6 @@ export async function POST(request: Request) {
         avatarUrl,
       },
       emailSent: true,
-      temporaryPassword: password,
     });
   } catch (error) {
     const message =

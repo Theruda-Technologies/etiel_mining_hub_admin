@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import {
   KeyIcon,
   LoginArrowIcon,
-  ShieldIcon,
   UserIcon,
 } from "@/shared/components/icons";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
@@ -37,7 +36,7 @@ export function LoginForm() {
       };
 
       if (!response.ok) {
-        setError(data.error ?? "Authentication failed.");
+        setError(data.error ?? t("login.authFailed"));
         setLoading(false);
         return;
       }
@@ -45,7 +44,7 @@ export function LoginForm() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Unable to reach auth service.");
+      setError(t("login.authUnreachable"));
       setLoading(false);
     }
   }
@@ -60,13 +59,14 @@ export function LoginForm() {
       </div>
       <div className="px-8 pt-10 pb-8">
         <div className="mb-6 flex flex-col items-center text-center">
-          <ShieldIcon className="mb-4 size-8 text-accent" />
+          <img
+            src="/etiel-logo.png"
+            alt={t("nav.brand")}
+            className="mb-5 h-28 w-auto object-contain bg-transparent"
+          />
           <h1 className="font-display text-[28px] font-bold tracking-tight text-white">
             {t("login.title")}
           </h1>
-          <p className="mt-2 font-mono text-[11px] tracking-[0.18em] text-muted uppercase">
-            {t("nav.brand")}
-          </p>
         </div>
 
         <div className="mb-6 h-px bg-white/10" />
