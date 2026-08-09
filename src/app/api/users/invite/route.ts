@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/features/auth/lib/server";
-import { parseRole, type UserRole } from "@/features/auth/types";
+import { type UserRole } from "@/features/auth/types";
 import {
   isSmtpConfigured,
   sendInviteCredentialsEmail,
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
 
     const email = body.email?.trim().toLowerCase() ?? "";
     const fullName = body.fullName?.trim() ?? "";
-    const role = parseRole(body.role);
+    // Invites are always Admin; Super Admin is not assignable from the UI.
+    const role: UserRole = "admin";
     const avatarUrl = body.avatarUrl?.trim() || null;
     const password =
       body.password?.trim() && body.password.trim().length >= 8

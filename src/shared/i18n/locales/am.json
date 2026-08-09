@@ -57,7 +57,7 @@
     "equipment": "መሳሪያ",
     "date": "ቀን",
     "status": "ሁኔታ",
-    "noOrders": "እስካሁን ትዕዛዝ የለም። የሙከራ ውሂብ ለመጫን `npm run seed` ይጠቀሙ።",
+    "noOrders": "እስካሁን ትዕዛዝ የለም።",
     "noMatches": "ከፍለጋዎ ወይም ማጣሪያዎ ጋር የሚመሳሰል ትዕዛዝ የለም።",
     "filterByStatus": "በሁኔታ አጣራ"
   },

@@ -9,7 +9,6 @@ import {
   roleLabel,
 } from "@/features/auth/types";
 import {
-  ChevronDownIcon,
   KeyIcon,
   LockIcon,
   SendIcon,
@@ -53,7 +52,6 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<UserRole>("admin");
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -183,7 +181,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
         body: JSON.stringify({
           fullName: inviteName,
           email: inviteEmail,
-          role: inviteRole,
+          role: "admin",
         }),
       });
       const data = (await res.json()) as {
@@ -459,24 +457,6 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                     />
                   </Field>
                 </div>
-
-                <Field label={t("settings.role")}>
-                  <span className="relative block">
-                    <select
-                      value={inviteRole}
-                      onChange={(e) =>
-                        setInviteRole(e.target.value as UserRole)
-                      }
-                      className={`${inputClass} appearance-none pr-9`}
-                    >
-                      <option value="admin">{t("settings.roleAdmin")}</option>
-                      <option value="super_admin">
-                        {t("settings.roleSuperAdmin")}
-                      </option>
-                    </select>
-                    <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted" />
-                  </span>
-                </Field>
 
                 {inviteError ? (
                   <p className="text-[12px] text-danger">{inviteError}</p>

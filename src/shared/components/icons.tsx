@@ -225,6 +225,14 @@ export function HeadsetIcon(props: IconProps) {
   );
 }
 
+export function WrenchIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M14.7 6.3a4.5 4.5 0 0 0-6.1 6.1l-5.3 5.3a1.5 1.5 0 0 0 2.1 2.1l5.3-5.3a4.5 4.5 0 0 0 6.1-6.1l-2.5 2.5-2.1-2.1z" />
+    </svg>
+  );
+}
+
 export function GradCapIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...props}>

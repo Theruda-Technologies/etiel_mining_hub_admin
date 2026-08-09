@@ -10,9 +10,9 @@ import {
   ChevronDownIcon,
   DownloadIcon,
   FilterIcon,
-  HeadsetIcon,
   PackageIcon,
   SortIcon,
+  WrenchIcon,
 } from "@/shared/components/icons";
 import { useSearchQuery } from "@/shared/components/search-context";
 
@@ -137,7 +137,7 @@ export function DashboardOverview({
               {t("dashboard.viewServices")}
             </Link>
           }
-          icon={<HeadsetIcon className="size-5 text-accent" />}
+          icon={<WrenchIcon className="size-5 text-accent" />}
         />
         <MetricCard
           label={t("dashboard.orders")}

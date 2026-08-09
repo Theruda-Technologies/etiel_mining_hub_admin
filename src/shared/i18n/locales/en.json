@@ -57,7 +57,7 @@
     "equipment": "Equipment",
     "date": "Date",
     "status": "Status",
-    "noOrders": "No orders yet. Run `npm run seed` to load demo data.",
+    "noOrders": "No orders yet.",
     "noMatches": "No orders match your search or filters.",
     "filterByStatus": "Filter by status"
   },
