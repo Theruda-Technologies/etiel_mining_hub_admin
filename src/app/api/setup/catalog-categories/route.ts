@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 
 /**
  * Applies catalog category seed rows when the table already exists.
@@ -24,16 +22,12 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (probeError) {
-    const sqlPath = path.join(
-      process.cwd(),
-      "supabase/migrations/007_catalog_categories_table.sql",
-    );
-    const sql = await readFile(sqlPath, "utf8");
     return NextResponse.json(
       {
         error:
-          "catalog_categories table is missing. Run the SQL below in the Supabase SQL Editor, then retry this endpoint.",
-        sql,
+          "catalog_categories table is missing. Run supabase/migrations/007_catalog_categories_table.sql in the Supabase SQL Editor, then retry this endpoint.",
+        migration: "supabase/migrations/007_catalog_categories_table.sql",
+        docs: "https://supabase.com/dashboard/project/_/sql/new",
       },
       { status: 409 },
     );

@@ -46,11 +46,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: [
-            "SMTP is required to email the invite password.",
-            "Add to .env.local (Resend):",
-            "SMTP_HOST=smtp.resend.com",
-            "SMTP_PORT=465",
-            "SMTP_USER=resend",
+            "Resend is required to email the invite password.",
+            "Add to .env.local (or Worker secrets):",
             "SMTP_PASS=re_your_api_key",
             'SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"',
             "Restart the dev server after saving.",
@@ -68,7 +65,7 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
 
-    // Create the Auth user (no Auth invite mailer — we send credentials via SMTP).
+    // Create the Auth user (we email credentials via Resend HTTP).
     const { data, error } = await admin.auth.admin.createUser({
       email,
       password,

@@ -68,20 +68,16 @@ Only the **Super Admin** can invite users (Settings → Administrative Access):
 
 - Choose role: **Administrator** or **Super Admin**
 - Account is created in Supabase Auth + `profiles`
-- The app emails login **email + password** via SMTP (password is not shown in the admin UI)
+- The app emails login **email + password** via Resend (password is not shown in the admin UI)
 
-### SMTP (required for invite emails)
+### Resend (required for invite emails)
 
-Supabase’s built-in mailer cannot reliably send customized invites with a
-password. Configure SMTP in `.env.local` instead (Resend is simplest):
+Invites are sent with the Resend HTTP API (works on Cloudflare Workers; no SMTP sockets):
 
 1. Sign up at [resend.com](https://resend.com) and create an API key
 2. Add to `.env.local`:
 
 ```bash
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_USER=resend
 SMTP_PASS=re_your_api_key
 SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"
 ```
@@ -91,16 +87,7 @@ SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"
 `onboarding@resend.dev` works for testing (sends to your Resend account email).
 For production, verify your domain in Resend and use an address on that domain.
 
-If you prefer to configure SMTP inside the Supabase dashboard instead, use the
-same Resend values under **Authentication → SMTP**:
-
-| Field | Value |
-|-------|--------|
-| Host | `smtp.resend.com` |
-| Port | `465` |
-| Username | `resend` |
-| Password | your Resend API key (`re_…`) |
-| Sender email | `onboarding@resend.dev` (or your verified domain) |
+See [CLOUDFLARE.md](../CLOUDFLARE.md) for Worker secret names when deploying.
 
 ### Role differences
 

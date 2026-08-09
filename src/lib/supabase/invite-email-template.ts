@@ -1,26 +1,23 @@
-import { readFileSync } from "fs";
-import { join } from "path";
-
 /** HTML body for Supabase Auth “Invite user” template (includes password). */
 export function getInviteEmailTemplateHtml(): string {
-  try {
-    return readFileSync(
-      join(process.cwd(), "supabase/email-templates/invite-user.html"),
-      "utf8",
-    )
-      .replace(/^<!--[\s\S]*?-->\s*/m, "")
-      .trim();
-  } catch {
-    return [
-      "<h2>Etiel Mining Hub access</h2>",
-      "<p>Hello {{ .Data.full_name }},</p>",
-      "<p>You have been invited as <strong>{{ .Data.role_label }}</strong>.</p>",
-      '<p><strong>Login URL:</strong> <a href="{{ .Data.login_url }}">{{ .Data.login_url }}</a></p>',
-      "<p><strong>Email:</strong> {{ .Email }}</p>",
-      "<p><strong>Password:</strong> {{ .Data.password }}</p>",
-      "<p><a href=\"{{ .ConfirmationURL }}\">Accept invitation</a></p>",
-    ].join("\n");
-  }
+  return [
+    "<h2>Etiel Mining Hub access</h2>",
+    "<p>Hello {{ .Data.full_name }},</p>",
+    "<p>",
+    "  You have been invited as",
+    "  <strong>{{ .Data.role_label }}</strong>",
+    "  to the Etiel Mining Hub Operational Center.",
+    "</p>",
+    '<p><strong>Login URL:</strong> <a href="{{ .Data.login_url }}">{{ .Data.login_url }}</a></p>',
+    "<p><strong>Email:</strong> {{ .Email }}</p>",
+    "<p><strong>Password:</strong> {{ .Data.password }}</p>",
+    "<p>",
+    "  Sign in with the email and password above, then change your password",
+    "  in System Settings. You can also accept the invite with this link:",
+    "</p>",
+    '<p><a href="{{ .ConfirmationURL }}">Accept invitation</a></p>',
+    '<p style="color:#666;font-size:12px;">© Etiel Mining Hub Operational Center</p>',
+  ].join("\n");
 }
 
 export const INVITE_EMAIL_SUBJECT = "Your Etiel Mining Hub access credentials";

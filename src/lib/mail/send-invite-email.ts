@@ -1,5 +1,3 @@
-import nodemailer from "nodemailer";
-
 export type InviteMailInput = {
   to: string;
   fullName: string;
@@ -8,24 +6,29 @@ export type InviteMailInput = {
   loginUrl: string;
 };
 
-export function isSmtpConfigured() {
-  return Boolean(
-    process.env.SMTP_HOST?.trim() &&
-      process.env.SMTP_USER?.trim() &&
-      process.env.SMTP_PASS?.trim() &&
-      process.env.SMTP_FROM?.trim(),
+function resendApiKey() {
+  return (
+    process.env.RESEND_API_KEY?.trim() ||
+    process.env.SMTP_PASS?.trim() ||
+    ""
   );
 }
 
-function smtpMissingMessage() {
+function fromAddress() {
+  return process.env.SMTP_FROM?.trim() || process.env.RESEND_FROM?.trim() || "";
+}
+
+/** Invite mail uses Resend HTTP (Workers-compatible; no SMTP sockets). */
+export function isSmtpConfigured() {
+  return Boolean(resendApiKey() && fromAddress());
+}
+
+function missingConfigMessage() {
   return [
-    "SMTP is not configured. Add these to .env.local (Resend example):",
-    "SMTP_HOST=smtp.resend.com",
-    "SMTP_PORT=465",
-    "SMTP_USER=resend",
-    "SMTP_PASS=re_your_api_key",
-    "SMTP_FROM=\"Etiel Mining Hub <onboarding@resend.dev>\"",
-    "Then restart npm run dev. Free signup: https://resend.com",
+    "Resend is not configured. Add to .env.local (or Worker secrets):",
+    "SMTP_PASS=re_your_api_key   (or RESEND_API_KEY)",
+    'SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"',
+    "Free signup: https://resend.com",
   ].join(" ");
 }
 
@@ -33,24 +36,11 @@ export async function sendInviteCredentialsEmail(
   input: InviteMailInput,
 ): Promise<{ sent: true } | { sent: false; error: string }> {
   if (!isSmtpConfigured()) {
-    return { sent: false, error: smtpMissingMessage() };
+    return { sent: false, error: missingConfigMessage() };
   }
 
-  const host = process.env.SMTP_HOST!.trim();
-  const port = Number(process.env.SMTP_PORT || "465");
-  const user = process.env.SMTP_USER!.trim();
-  const pass = process.env.SMTP_PASS!.trim();
-  const from = process.env.SMTP_FROM!.trim();
-  const secure =
-    process.env.SMTP_SECURE?.trim() === "true" ||
-    port === 465;
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
+  const apiKey = resendApiKey();
+  const from = fromAddress();
 
   const subject = "Your Etiel Mining Hub access credentials";
   const text = [
@@ -86,13 +76,31 @@ export async function sendInviteCredentialsEmail(
 `.trim();
 
   try {
-    await transporter.sendMail({
-      from,
-      to: input.to,
-      subject,
-      text,
-      html,
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [input.to],
+        subject,
+        text,
+        html,
+      }),
     });
+
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      return {
+        sent: false,
+        error: body?.message ?? `Resend error (${res.status})`,
+      };
+    }
+
     return { sent: true };
   } catch (error) {
     const message =

@@ -1,7 +1,14 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/features/auth/lib/server";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { LoginFooter } from "./login-footer";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getSession();
+  if (session) {
+    redirect("/dashboard");
+  }
+
   return (
     <main className="relative flex min-h-full flex-1 flex-col">
       <div
