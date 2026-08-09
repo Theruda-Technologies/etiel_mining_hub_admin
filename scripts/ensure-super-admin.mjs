@@ -121,6 +121,25 @@ if (profileError) {
   console.warn("profiles upsert warning:", profileError.message);
 }
 
+// Keep a single Super Admin: demote anyone else with that role.
+for (const other of listed.users) {
+  if (other.id === user.id) continue;
+  if (other.app_metadata?.role !== "super_admin") continue;
+
+  const { error } = await admin.auth.admin.updateUserById(other.id, {
+    app_metadata: { ...other.app_metadata, role: "admin" },
+  });
+  if (error) {
+    console.warn(`Could not demote ${other.email}:`, error.message);
+    continue;
+  }
+  await admin
+    .from("profiles")
+    .update({ role: "admin", updated_at: new Date().toISOString() })
+    .eq("id", other.id);
+  console.log("Demoted former Super Admin:", other.email);
+}
+
 console.log("Super Admin ready:", {
   id: user.id,
   email,
