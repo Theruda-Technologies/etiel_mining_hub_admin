@@ -63,11 +63,10 @@ Sign in at `/login` with that email and password.
 npm run seed
 ```
 
-This loads products, services, sample orders, profile avatars, pending invites, and order timelines (stored in the private Supabase Storage bucket `order-timeline`).
+This loads products, services, sample orders, demo admin accounts, and pending invites. Super Admin is created separately via `npm run setup:superadmin`.
 
 | Account | Email | Password |
 |---------|-------|----------|
-| Super Admin | `etielmining@gmail.com` | `SuperAdmin!234` |
 | Demo Admin (invited) | `admin.demo@etiel.mining` | `AdminDemo!234` |
 
 ## 5. Invite Admin users

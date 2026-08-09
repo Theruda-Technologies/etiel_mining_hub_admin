@@ -37,13 +37,9 @@ const admin = createClient(url, key, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const SUPER_EMAIL =
-  process.env.SUPER_ADMIN_EMAIL?.toLowerCase() || "etielmining@gmail.com";
 const ADMIN_EMAIL = "admin.demo@etiel.mining";
 const ADMIN_PASSWORD = "AdminDemo!234";
 
-const AVATAR_SUPER =
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&crop=face";
 const AVATAR_ADMIN =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&h=160&fit=crop&crop=face";
 
@@ -533,14 +529,7 @@ async function main() {
 
   await seedCatalogCategories();
 
-  await ensureUser({
-    email: SUPER_EMAIL,
-    password: process.env.SUPER_ADMIN_PASSWORD || "SuperAdmin!234",
-    fullName: "Super Admin",
-    role: "super_admin",
-    avatarUrl: AVATAR_SUPER,
-    status: "active",
-  });
+  // Super Admin is handled by `npm run setup:superadmin`, not seed.
 
   await ensureUser({
     email: ADMIN_EMAIL,
@@ -576,12 +565,6 @@ async function main() {
   await seedOrders(productIds, serviceIds);
 
   console.log("\nSeed complete.");
-  console.log(
-    "Super Admin:",
-    SUPER_EMAIL,
-    "/",
-    process.env.SUPER_ADMIN_PASSWORD || "SuperAdmin!234",
-  );
   console.log("Demo Admin (invited):", ADMIN_EMAIL, "/", ADMIN_PASSWORD);
   console.log(
     "Optional: run supabase/migrations/003_avatar_and_timeline.sql for avatar_url column.",
