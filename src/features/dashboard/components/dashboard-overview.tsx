@@ -233,6 +233,7 @@ export function DashboardOverview({
                   <td
                     colSpan={5}
                     className="px-4 py-8 text-center text-[13px] text-muted"
+                    suppressHydrationWarning
                   >
                     {orders.length === 0
                       ? t("dashboard.noOrders")

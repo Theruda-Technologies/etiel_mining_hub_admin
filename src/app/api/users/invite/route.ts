@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
       new URL(request.url).origin;
     const loginUrl = `${appUrl}/login`;
-    const roleLabel = role === "super_admin" ? "Super Admin" : "Admin";
+    const roleLabel = "Admin";
 
     const admin = createAdminClient();
 
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       id: data.user.id,
       email,
       full_name: fullName,
-      role: role === "super_admin" ? "admin" : role,
+      role: "admin",
       updated_at: new Date().toISOString(),
     });
 

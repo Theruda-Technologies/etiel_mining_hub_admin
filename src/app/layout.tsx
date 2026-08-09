@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import {
   IBM_Plex_Mono,
   IBM_Plex_Sans,
@@ -6,6 +7,12 @@ import {
   Space_Grotesk,
 } from "next/font/google";
 import { I18nProvider } from "@/shared/i18n/provider";
+import {
+  DEFAULT_LOCALE,
+  isAppLocale,
+  LOCALE_COOKIE,
+  type AppLocale,
+} from "@/shared/i18n/locale";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -37,15 +44,25 @@ export const metadata: Metadata = {
   description: "Admin console for Etiel Mining Hub",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(LOCALE_COOKIE)?.value;
+  const localeFromCookie = isAppLocale(raw);
+  const initialLocale: AppLocale = localeFromCookie ? raw : DEFAULT_LOCALE;
+
   return (
     <html
-      lang="am"
+      lang={initialLocale === "am" ? "am" : "en"}
       className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} ${notoEthiopic.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider
+          initialLocale={initialLocale}
+          localeFromCookie={localeFromCookie}
+        >
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );
