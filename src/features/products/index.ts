@@ -3,6 +3,13 @@ export {
   SERVICE_CATEGORIES,
   productCategoryLabel,
   serviceCategoryLabel,
+  categoryLabel,
+} from "./data/categories";
+export type {
+  CatalogCategory,
+  CatalogCategoryKind,
+  ProductCategory,
+  ServiceCategory,
 } from "./data/categories";
 export { CatalogManager } from "./components/catalog-manager";
 export { AddProductForm } from "./components/add-product-form";
@@ -30,4 +37,3 @@ export type {
   CatalogService,
   CatalogStatus,
 } from "./data/catalog";
-export type { ProductCategory, ServiceCategory } from "./data/categories";

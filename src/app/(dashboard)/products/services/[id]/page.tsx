@@ -3,6 +3,7 @@ import {
   getService,
   ServiceDetailEditor,
 } from "@/features/products";
+import { listServiceCategories } from "@/features/products/data/categories.server";
 
 export default async function ServiceDetailPage({
   params,
@@ -10,8 +11,13 @@ export default async function ServiceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const service = await getService(id);
+  const [service, categories] = await Promise.all([
+    getService(id),
+    listServiceCategories(),
+  ]);
   if (!service) notFound();
 
-  return <ServiceDetailEditor initialService={service} />;
+  return (
+    <ServiceDetailEditor initialService={service} categories={categories} />
+  );
 }

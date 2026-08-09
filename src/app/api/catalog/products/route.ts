@@ -6,10 +6,7 @@ import {
   updateProduct,
 } from "@/features/products/api/catalog";
 import type { CatalogProduct } from "@/features/products/data/catalog";
-import {
-  isProductCategory,
-  type ProductCategory,
-} from "@/features/products/data/categories";
+import { isValidCategory } from "@/features/products/data/categories.server";
 
 function assertStaff(session: Awaited<ReturnType<typeof getSession>>) {
   return (
@@ -41,7 +38,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (!body.category || !isProductCategory(body.category)) {
+  if (!body.category || !(await isValidCategory("product", body.category))) {
     return NextResponse.json(
       { error: "A valid product category is required." },
       { status: 400 },
@@ -51,7 +48,7 @@ export async function POST(request: Request) {
   const { data, error } = await createProduct({
     title: body.title,
     sku: body.sku,
-    category: body.category as ProductCategory,
+    category: body.category.trim(),
     description: body.description,
     status: body.status,
     images: body.images,
@@ -77,6 +74,16 @@ export async function PATCH(request: Request) {
   };
   if (!body.id || !body.patch) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  }
+
+  if (
+    body.patch.category !== undefined &&
+    !(await isValidCategory("product", body.patch.category))
+  ) {
+    return NextResponse.json(
+      { error: "A valid product category is required." },
+      { status: 400 },
+    );
   }
 
   const { error } = await updateProduct(body.id, body.patch);

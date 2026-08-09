@@ -113,11 +113,10 @@ export async function PATCH(request: Request) {
       body.status === "suspended" || body.status === "active";
 
     if (isBlockAction) {
-      if (!canBlockUser(session.role, targetRole)) {
+      if (session.role !== "super_admin" || !canBlockUser(session.role, targetRole)) {
         return NextResponse.json(
           {
-            error:
-              "You can only block or unblock Admin accounts.",
+            error: "Only a Super Admin can block or unblock Admin accounts.",
           },
           { status: 403 },
         );

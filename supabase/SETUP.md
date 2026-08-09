@@ -1,12 +1,34 @@
 # Supabase setup
 
-## 1. Optional: profile image column
+## 1. Catalog categories (required for product/service filters)
+
+Run `supabase/migrations/007_catalog_categories_table.sql` in the
+[SQL Editor](https://supabase.com/dashboard/project/ccompobtyzjanpcfmhxi/sql/new).
+
+That creates `catalog_categories` (EN/AM labels), seeds the default options,
+and drops the old hard-coded category CHECK constraints on `products` /
+`services`.
+
+Or with a Postgres URI:
+
+```bash
+DATABASE_URL="postgresql://..." npm run apply:categories
+```
+
+After the table exists, you can re-seed rows with:
+
+```bash
+curl -X POST http://localhost:3000/api/setup/catalog-categories \
+  -H "x-setup-secret: $SUPER_ADMIN_SETUP_SECRET"
+```
+
+## 2. Optional: profile image column
 
 Avatar URLs are stored in Auth `user_metadata.avatar_url` (works immediately).
 To also persist on `profiles`, run `supabase/migrations/003_avatar_and_timeline.sql`
 in the [SQL Editor](https://supabase.com/dashboard/project/ccompobtyzjanpcfmhxi/sql/new).
 
-## 2. Bootstrap the Super Admin
+## 3. Bootstrap the Super Admin
 
 Add these to `.env.local` (already templated in `.env.example`):
 
@@ -27,7 +49,7 @@ curl -X POST http://localhost:3000/api/setup/bootstrap \
 
 Sign in at `/login` with that email and password.
 
-## 3. Seed demo catalog + orders
+## 4. Seed demo catalog + orders
 
 ```bash
 npm run seed
@@ -40,7 +62,7 @@ This loads products, services, sample orders, profile avatars, pending invites, 
 | Super Admin | `superadmin@etiel.mining` | `SuperAdmin!234` |
 | Demo Admin (invited) | `admin.demo@etiel.mining` | `AdminDemo!234` |
 
-## 4. Invite Admin users
+## 5. Invite Admin users
 
 Only the **Super Admin** can invite users (Settings → Administrative Access):
 
@@ -87,7 +109,7 @@ same Resend values under **Authentication → SMTP**:
 | **Super Admin** | Everything + dispatch invitations / revoke pending invites + block Admins |
 | **Admin** | Dashboard, Orders, Products, Settings. Can block/unblock other Admins. Cannot invite |
 
-## 5. App URL for invite redirects
+## 6. App URL for invite redirects
 
 ```bash
 NEXT_PUBLIC_APP_URL=http://localhost:3000

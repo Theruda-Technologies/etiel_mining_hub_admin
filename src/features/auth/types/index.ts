@@ -45,7 +45,7 @@ export const ROLE_PERMISSIONS: Record<
   admin: {
     label: "Admin",
     description:
-      "Operational access to catalog, orders, and settings. Can block other Admin accounts.",
+      "Operational access to catalog, orders, and settings. Cannot invite or block users.",
     routes: [
       "/dashboard",
       "/orders",
@@ -54,7 +54,7 @@ export const ROLE_PERMISSIONS: Record<
       "/settings",
     ],
     canInvite: false,
-    canBlockAdmins: true,
+    canBlockAdmins: false,
   },
 };
 
@@ -76,8 +76,9 @@ export function canBlockAdmins(role: UserRole) {
 
 /** Whether `actor` may suspend/unsuspend a user with `targetRole`. */
 export function canBlockUser(actor: UserRole, targetRole: UserRole) {
+  // Only Super Admins can block, and only Admin accounts (not other Super Admins).
+  if (actor !== "super_admin") return false;
   if (!canBlockAdmins(actor)) return false;
-  // Only Admin accounts can be blocked (not Super Admins).
   if (targetRole !== "admin") return false;
   return true;
 }

@@ -3,11 +3,15 @@
 import { useTranslation } from "react-i18next";
 import { TrashIcon } from "@/shared/components/icons";
 import { ImageGalleryEditor } from "@/shared/components/image-gallery-editor";
-import { SERVICE_CATEGORIES } from "../data/categories";
+import {
+  categoryLabel,
+  type CatalogCategory,
+} from "../data/categories";
 import type { CatalogService } from "../data/catalog";
 
 type ServiceCardProps = {
   service: CatalogService;
+  categories: CatalogCategory[];
   onChange: (patch: Partial<CatalogService>) => void;
   onDelete: () => void;
   onSave: () => void;
@@ -17,13 +21,14 @@ type ServiceCardProps = {
 
 export function ServiceCard({
   service,
+  categories,
   onChange,
   onDelete,
   onSave,
   saving = false,
   dirty = false,
 }: ServiceCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
@@ -60,16 +65,12 @@ export function ServiceCard({
           {t("products.category")}
           <select
             value={service.category}
-            onChange={(e) =>
-              onChange({
-                category: e.target.value as CatalogService["category"],
-              })
-            }
+            onChange={(e) => onChange({ category: e.target.value })}
             className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-[12px] outline-none focus:border-accent/50"
           >
-            {SERVICE_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <option key={cat.value} value={cat.value}>
-                {t(`products.categories.${cat.value}`)}
+                {categoryLabel(categories, cat.value, i18n.language)}
               </option>
             ))}
           </select>

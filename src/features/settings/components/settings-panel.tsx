@@ -16,6 +16,7 @@ import {
   UserIcon,
 } from "@/shared/components/icons";
 import { ClickableAvatar } from "@/shared/components/clickable-avatar";
+import { ProfileAvatar } from "@/shared/components/profile-avatar";
 import { useSearchQuery } from "@/shared/components/search-context";
 
 type AdminUser = {
@@ -24,6 +25,7 @@ type AdminUser = {
   full_name: string;
   role: UserRole;
   status: string;
+  avatar_url?: string | null;
 };
 
 const inputClass =
@@ -556,7 +558,14 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                             className="border-b border-border last:border-b-0"
                           >
                             <td className="px-1 py-3.5 text-[13px] text-foreground">
-                              {user.full_name}
+                              <span className="inline-flex items-center gap-2.5">
+                                <ProfileAvatar
+                                  src={user.avatar_url}
+                                  name={user.full_name || user.email}
+                                  size={32}
+                                />
+                                <span>{user.full_name}</span>
+                              </span>
                             </td>
                             <td className="px-1 py-3.5 font-mono text-[12px] text-muted-strong">
                               {user.email}

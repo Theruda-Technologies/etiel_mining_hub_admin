@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRightIcon } from "@/shared/components/icons";
 import type { CatalogService, CatalogStatus } from "../data/catalog";
+import type { CatalogCategory } from "../data/categories";
 import { ServiceCard } from "./service-card";
 
 function statusSelectClass(status: CatalogStatus) {
@@ -16,8 +17,10 @@ function statusSelectClass(status: CatalogStatus) {
 
 export function ServiceDetailEditor({
   initialService,
+  categories,
 }: {
   initialService: CatalogService;
+  categories: CatalogCategory[];
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -129,6 +132,7 @@ export function ServiceDetailEditor({
 
       <ServiceCard
         service={service}
+        categories={categories}
         onChange={updateLocal}
         onDelete={() => void handleDelete()}
         onSave={() => void handleSave()}

@@ -6,19 +6,27 @@ import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "@/shared/components/icons";
 import { ImageGalleryEditor } from "@/shared/components/image-gallery-editor";
-import { PRODUCT_CATEGORIES } from "../data/categories";
+import {
+  categoryLabel,
+  type CatalogCategory,
+} from "../data/categories";
 import type { CatalogStatus, SpecRow } from "../data/catalog";
-import type { ProductCategory } from "../data/categories";
 
 const inputClass =
   "w-full rounded-md border border-border bg-background px-3 py-2.5 text-[13px] text-foreground outline-none placeholder:text-muted focus:border-accent/50";
 
-export function AddProductForm() {
-  const { t } = useTranslation();
+export function AddProductForm({
+  categories,
+}: {
+  categories: CatalogCategory[];
+}) {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [sku, setSku] = useState("");
-  const [category, setCategory] = useState<ProductCategory>("metal_detectors");
+  const [category, setCategory] = useState(
+    () => categories[0]?.value ?? "",
+  );
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<CatalogStatus>("Draft");
   const [images, setImages] = useState<string[]>([]);
@@ -125,15 +133,14 @@ export function AddProductForm() {
             <Field label={t("products.category")}>
               <span className="relative block">
                 <select
+                  required
                   value={category}
-                  onChange={(e) =>
-                    setCategory(e.target.value as ProductCategory)
-                  }
+                  onChange={(e) => setCategory(e.target.value)}
                   className={`${inputClass} appearance-none pr-9`}
                 >
-                  {PRODUCT_CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat.value} value={cat.value}>
-                      {t(`products.categories.${cat.value}`)}
+                      {categoryLabel(categories, cat.value, i18n.language)}
                     </option>
                   ))}
                 </select>

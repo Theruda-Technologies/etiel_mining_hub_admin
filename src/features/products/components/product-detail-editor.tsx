@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRightIcon } from "@/shared/components/icons";
 import type { CatalogProduct, CatalogStatus } from "../data/catalog";
+import type { CatalogCategory } from "../data/categories";
 import { ProductCard } from "./product-card";
 
 function statusSelectClass(status: CatalogStatus) {
@@ -16,8 +17,10 @@ function statusSelectClass(status: CatalogStatus) {
 
 export function ProductDetailEditor({
   initialProduct,
+  categories,
 }: {
   initialProduct: CatalogProduct;
+  categories: CatalogCategory[];
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -130,6 +133,7 @@ export function ProductDetailEditor({
 
       <ProductCard
         product={product}
+        categories={categories}
         onChange={updateLocal}
         onDelete={() => void handleDelete()}
         onSave={() => void handleSave()}

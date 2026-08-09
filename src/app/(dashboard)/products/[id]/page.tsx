@@ -3,6 +3,7 @@ import {
   getProduct,
   ProductDetailEditor,
 } from "@/features/products";
+import { listProductCategories } from "@/features/products/data/categories.server";
 
 export default async function ProductDetailPage({
   params,
@@ -10,8 +11,13 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const [product, categories] = await Promise.all([
+    getProduct(id),
+    listProductCategories(),
+  ]);
   if (!product) notFound();
 
-  return <ProductDetailEditor initialProduct={product} />;
+  return (
+    <ProductDetailEditor initialProduct={product} categories={categories} />
+  );
 }

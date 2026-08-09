@@ -3,11 +3,15 @@
 import { useTranslation } from "react-i18next";
 import { TrashIcon } from "@/shared/components/icons";
 import { ImageGalleryEditor } from "@/shared/components/image-gallery-editor";
-import { PRODUCT_CATEGORIES } from "../data/categories";
+import {
+  categoryLabel,
+  type CatalogCategory,
+} from "../data/categories";
 import type { CatalogProduct } from "../data/catalog";
 
 type ProductCardProps = {
   product: CatalogProduct;
+  categories: CatalogCategory[];
   onChange: (patch: Partial<CatalogProduct>) => void;
   onDelete: () => void;
   onSave: () => void;
@@ -17,13 +21,14 @@ type ProductCardProps = {
 
 export function ProductCard({
   product,
+  categories,
   onChange,
   onDelete,
   onSave,
   saving = false,
   dirty = false,
 }: ProductCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <article className="rounded-lg border border-border bg-surface p-4">
@@ -60,16 +65,12 @@ export function ProductCard({
           {t("products.category")}
           <select
             value={product.category}
-            onChange={(e) =>
-              onChange({
-                category: e.target.value as CatalogProduct["category"],
-              })
-            }
+            onChange={(e) => onChange({ category: e.target.value })}
             className="mt-1 h-9 w-full rounded-md border border-border bg-background px-2 text-[12px] text-foreground outline-none focus:border-accent/50"
           >
-            {PRODUCT_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <option key={cat.value} value={cat.value}>
-                {t(`products.categories.${cat.value}`)}
+                {categoryLabel(categories, cat.value, i18n.language)}
               </option>
             ))}
           </select>

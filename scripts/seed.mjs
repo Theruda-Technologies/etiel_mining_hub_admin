@@ -47,6 +47,72 @@ const AVATAR_SUPER =
 const AVATAR_ADMIN =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&h=160&fit=crop&crop=face";
 
+const CATALOG_CATEGORIES = [
+  {
+    kind: "product",
+    value: "metal_detectors",
+    label: "Metal Detectors",
+    label_am: "የብረት መፈለጊያዎች",
+    sort_order: 1,
+  },
+  {
+    kind: "product",
+    value: "ground_scanners",
+    label: "Ground Scanners",
+    label_am: "የመሬት ስካነሮች",
+    sort_order: 2,
+  },
+  {
+    kind: "product",
+    value: "drilling",
+    label: "Drilling",
+    label_am: "ቁፋሮ",
+    sort_order: 3,
+  },
+  {
+    kind: "product",
+    value: "excavators",
+    label: "Excavators",
+    label_am: "ቆፋሪዎች",
+    sort_order: 4,
+  },
+  {
+    kind: "product",
+    value: "mining_supplies",
+    label: "Mining Supplies",
+    label_am: "የማዕድን አቅርቦቶች",
+    sort_order: 5,
+  },
+  {
+    kind: "service",
+    value: "training",
+    label: "Training",
+    label_am: "ስልጠና",
+    sort_order: 1,
+  },
+  {
+    kind: "service",
+    value: "field_support",
+    label: "Field Support",
+    label_am: "የመስክ ድጋፍ",
+    sort_order: 2,
+  },
+  {
+    kind: "service",
+    value: "on_site_assembly",
+    label: "On-Site Assembly",
+    label_am: "በቦታው ላይ ስብሰባ",
+    sort_order: 3,
+  },
+  {
+    kind: "service",
+    value: "financing",
+    label: "Financing",
+    label_am: "ፋይናንስ",
+    sort_order: 4,
+  },
+];
+
 const PRODUCTS = [
   {
     sku: "MD-X9-882",
@@ -447,8 +513,25 @@ async function seedOrders(productIds, serviceIds) {
   }
 }
 
+async function seedCatalogCategories() {
+  const { error } = await admin
+    .from("catalog_categories")
+    .upsert(CATALOG_CATEGORIES, { onConflict: "kind,value" });
+  if (error) {
+    console.warn(
+      "catalog_categories skip:",
+      error.message,
+      "(run supabase/migrations/007_catalog_categories_table.sql first)",
+    );
+    return;
+  }
+  console.log("Upserted", CATALOG_CATEGORIES.length, "catalog categories");
+}
+
 async function main() {
   console.log("Seeding Supabase…");
+
+  await seedCatalogCategories();
 
   await ensureUser({
     email: SUPER_EMAIL,
@@ -502,6 +585,9 @@ async function main() {
   console.log("Demo Admin (invited):", ADMIN_EMAIL, "/", ADMIN_PASSWORD);
   console.log(
     "Optional: run supabase/migrations/003_avatar_and_timeline.sql for avatar_url column.",
+  );
+  console.log(
+    "Required once: run supabase/migrations/007_catalog_categories_table.sql for category options.",
   );
 }
 

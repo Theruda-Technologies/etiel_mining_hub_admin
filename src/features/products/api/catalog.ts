@@ -6,12 +6,7 @@ import type {
   CatalogStatus,
   SpecRow,
 } from "../data/catalog";
-import {
-  isProductCategory,
-  isServiceCategory,
-  type ProductCategory,
-  type ServiceCategory,
-} from "../data/categories";
+import type { ProductCategory, ServiceCategory } from "../data/categories";
 
 export type AdvertisementItem =
   | { kind: "product"; item: CatalogProduct }
@@ -61,24 +56,12 @@ function rowsToSpecs(rows: SpecRow[]) {
     .map((row) => ({ key: row.key, value: row.value }));
 }
 
-function defaultProductCategory(value: unknown): ProductCategory {
-  return isProductCategory(String(value))
-    ? (value as ProductCategory)
-    : "metal_detectors";
-}
-
-function defaultServiceCategory(value: unknown): ServiceCategory {
-  return isServiceCategory(String(value))
-    ? (value as ServiceCategory)
-    : "training";
-}
-
 function mapProduct(row: Record<string, unknown>): CatalogProduct {
   return {
     id: String(row.id),
     title: String(row.name ?? ""),
     sku: String(row.sku ?? ""),
-    category: defaultProductCategory(row.category),
+    category: String(row.category ?? ""),
     status: mapActive(row.is_active as boolean | null | undefined),
     images: Array.isArray(row.image_paths)
       ? row.image_paths.filter(Boolean).map(String)
@@ -94,7 +77,7 @@ function mapService(row: Record<string, unknown>): CatalogService {
     id: String(row.id),
     title: String(row.name ?? ""),
     sku: String(row.sku ?? ""),
-    category: defaultServiceCategory(row.category),
+    category: String(row.category ?? ""),
     description: String(row.description ?? ""),
     status: mapActive(row.is_active as boolean | null | undefined),
     images: Array.isArray(row.image_paths)

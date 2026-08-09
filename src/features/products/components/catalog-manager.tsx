@@ -7,7 +7,10 @@ import { useTranslation } from "react-i18next";
 import { FilterLinesIcon, ImageOffIcon } from "@/shared/components/icons";
 import { useSearchQuery } from "@/shared/components/search-context";
 import { cn } from "@/shared/utils";
-import { PRODUCT_CATEGORIES, SERVICE_CATEGORIES } from "../data/categories";
+import {
+  categoryLabel,
+  type CatalogCategory,
+} from "../data/categories";
 import {
   sampleProducts,
   sampleServices,
@@ -22,6 +25,8 @@ type CatalogManagerProps = {
   initialTab?: Tab;
   initialProducts?: CatalogProduct[];
   initialServices?: CatalogService[];
+  productCategories?: CatalogCategory[];
+  serviceCategories?: CatalogCategory[];
 };
 
 function statusClass(status: CatalogStatus) {
@@ -34,8 +39,10 @@ export function CatalogManager({
   initialTab = "products",
   initialProducts = sampleProducts,
   initialServices = sampleServices,
+  productCategories = [],
+  serviceCategories = [],
 }: CatalogManagerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { query } = useSearchQuery();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -54,6 +61,17 @@ export function CatalogManager({
     return null;
   }, [products, services]);
 
+  const categoryOptions =
+    tab === "products" ? productCategories : serviceCategories;
+
+  function labelFor(kind: Tab, value: string) {
+    return categoryLabel(
+      kind === "products" ? productCategories : serviceCategories,
+      value,
+      i18n.language,
+    );
+  }
+
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((product) => {
@@ -68,10 +86,17 @@ export function CatalogManager({
         product.title.toLowerCase().includes(q) ||
         product.sku.toLowerCase().includes(q) ||
         product.description.toLowerCase().includes(q) ||
-        t(`products.categories.${product.category}`).toLowerCase().includes(q)
+        labelFor("products", product.category).toLowerCase().includes(q)
       );
     });
-  }, [products, query, categoryFilter, statusFilter, t]);
+  }, [
+    products,
+    query,
+    categoryFilter,
+    statusFilter,
+    productCategories,
+    i18n.language,
+  ]);
 
   const filteredServices = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -87,13 +112,17 @@ export function CatalogManager({
         service.title.toLowerCase().includes(q) ||
         service.sku.toLowerCase().includes(q) ||
         service.description.toLowerCase().includes(q) ||
-        t(`products.categories.${service.category}`).toLowerCase().includes(q)
+        labelFor("services", service.category).toLowerCase().includes(q)
       );
     });
-  }, [services, query, categoryFilter, statusFilter, t]);
-
-  const categoryOptions =
-    tab === "products" ? PRODUCT_CATEGORIES : SERVICE_CATEGORIES;
+  }, [
+    services,
+    query,
+    categoryFilter,
+    statusFilter,
+    serviceCategories,
+    i18n.language,
+  ]);
 
   async function deleteProduct(id: string) {
     setBusyId(id);
@@ -215,7 +244,10 @@ export function CatalogManager({
                   ? t("products.advertisementTypeProduct")
                   : t("products.advertisementTypeService")}
                 {" · "}
-                {t(`products.categories.${advertisement.item.category}`)}
+                {labelFor(
+                  advertisement.kind === "product" ? "products" : "services",
+                  advertisement.item.category,
+                )}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -259,7 +291,7 @@ export function CatalogManager({
           <option value="all">{t("products.allCategories")}</option>
           {categoryOptions.map((cat) => (
             <option key={cat.value} value={cat.value}>
-              {t(`products.categories.${cat.value}`)}
+              {categoryLabel(categoryOptions, cat.value, i18n.language)}
             </option>
           ))}
         </select>
@@ -319,6 +351,7 @@ export function CatalogManager({
               title: product.title,
               image: product.images[0],
               category: product.category,
+              categoryLabel: labelFor("products", product.category),
               status: product.status,
             }))}
             busyId={busyId}
@@ -335,6 +368,7 @@ export function CatalogManager({
             title: service.title,
             image: service.images[0],
             category: service.category,
+            categoryLabel: labelFor("services", service.category),
             status: service.status,
           }))}
           busyId={busyId}
@@ -351,6 +385,7 @@ type CatalogListRow = {
   title: string;
   image?: string;
   category: string;
+  categoryLabel: string;
   status: CatalogStatus;
 };
 
@@ -421,7 +456,7 @@ function CatalogListTable({
                 {row.title}
               </td>
               <td className="px-4 py-3 text-[13px] text-muted-strong">
-                {t(`products.categories.${row.category}`)}
+                {row.categoryLabel}
               </td>
               <td className="px-4 py-3">
                 <span
