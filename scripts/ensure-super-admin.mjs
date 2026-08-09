@@ -36,7 +36,8 @@ function loadEnv() {
     ) {
       value = value.slice(1, -1);
     }
-    if (!process.env[key]) process.env[key] = value;
+    // Prefer .env.local over ambient shell env (e.g. stale SUPER_ADMIN_EMAIL).
+    process.env[key] = value;
   }
 }
 

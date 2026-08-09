@@ -19,7 +19,7 @@ function loadEnv() {
     if (i < 0) continue;
     const key = trimmed.slice(0, i);
     const value = trimmed.slice(i + 1);
-    if (!process.env[key]) process.env[key] = value;
+    process.env[key] = value;
   }
 }
 
@@ -38,7 +38,7 @@ const admin = createClient(url, key, {
 });
 
 const SUPER_EMAIL =
-  process.env.SUPER_ADMIN_EMAIL?.toLowerCase() || "superadmin@etiel.mining";
+  process.env.SUPER_ADMIN_EMAIL?.toLowerCase() || "etielmining@gmail.com";
 const ADMIN_EMAIL = "admin.demo@etiel.mining";
 const ADMIN_PASSWORD = "AdminDemo!234";
 

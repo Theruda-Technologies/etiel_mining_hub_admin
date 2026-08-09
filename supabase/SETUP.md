@@ -34,7 +34,7 @@ Add these to `.env.local` (already templated in `.env.example`):
 
 ```bash
 SUPER_ADMIN_SETUP_SECRET=etiel-setup-2024
-SUPER_ADMIN_EMAIL=superadmin@etiel.mining
+SUPER_ADMIN_EMAIL=etielmining@gmail.com
 SUPER_ADMIN_PASSWORD=SuperAdmin!234
 ```
 
@@ -50,7 +50,7 @@ Or via API while the app is running:
 curl -X POST http://localhost:3000/api/setup/bootstrap \
   -H "Content-Type: application/json" \
   -H "x-setup-secret: etiel-setup-2024" \
-  -d '{"email":"superadmin@etiel.mining","password":"SuperAdmin!234","fullName":"Super Admin"}'
+  -d '{"email":"etielmining@gmail.com","password":"SuperAdmin!234","fullName":"Super Admin"}'
 ```
 
 `npm run deploy` also runs `setup:superadmin` after uploading to Cloudflare.
@@ -67,7 +67,7 @@ This loads products, services, sample orders, profile avatars, pending invites, 
 
 | Account | Email | Password |
 |---------|-------|----------|
-| Super Admin | `superadmin@etiel.mining` | `SuperAdmin!234` |
+| Super Admin | `etielmining@gmail.com` | `SuperAdmin!234` |
 | Demo Admin (invited) | `admin.demo@etiel.mining` | `AdminDemo!234` |
 
 ## 5. Invite Admin users
