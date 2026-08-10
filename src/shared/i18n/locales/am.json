@@ -37,6 +37,7 @@
     "dashboard": "ዳሽቦርድ",
     "orders": "ትዕዛዞች",
     "products": "ምርቶች እና አገልግሎቶች",
+    "qas": "ጥያቄዎች",
     "settings": "ቅንብሮች",
     "copyright": "© 2024 ኢቲኤል አድሚን"
   },
@@ -220,6 +221,29 @@
     "inviteEmailNotSent": "የግብዣ ኢሜይል አልተላከም። በ .env.local ውስጥ SMTP ቅንብሮችን ያረጋግጡ።",
     "inviteUnreachable": "ግብዣ መላክ አልተቻለም።",
     "inviteOnlySuperAdmin": "እንደ {{role}} ገብተዋል። ግብዣዎችን መላክ እና ተጠቃሚዎችን ማስተዳደር የሚችለው ሱፐር አድሚን ብቻ ነው።"
+  },
+  "qas": {
+    "title": "ጥያቄዎች",
+    "subtitle": "ከተጠቃሚዎች የመጡ የእውቂያ ጥያቄዎች።",
+    "empty": "እስካሁን ጥያቄ የለም።",
+    "count": "{{count}} ጥያቄዎች",
+    "name": "ስም",
+    "contact": "እውቂያ",
+    "phone": "ስልክ",
+    "email": "ኢሜይል",
+    "message": "ጥያቄ",
+    "date": "ቀን",
+    "statusLabel": "ሁኔታ",
+    "internalNotes": "ውስጣዊ ማስታወሻዎች",
+    "notesPlaceholder": "ለቡድንዎ የክትትል ማስታወሻ ያክሉ…",
+    "saveNotes": "ማስታወሻዎችን አስቀምጥ",
+    "updateFailed": "ጥያቄውን ማዘመን አልተቻለም።",
+    "status": {
+      "new": "አዲስ",
+      "in_progress": "በሂደት ላይ",
+      "closed": "ተዘግቷል",
+      "resolved": "ተፈትቷል"
+    }
   },
   "login": {
     "title": "ግባ",

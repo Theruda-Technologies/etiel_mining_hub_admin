@@ -10,6 +10,7 @@ import {
   CraneIcon,
   GearIcon,
   GridIcon,
+  HelpIcon,
   LogoutIcon,
   PackageIcon,
 } from "./icons";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard", key: "dashboard", icon: GridIcon },
   { href: "/orders", key: "orders", icon: PackageIcon },
   { href: "/products", key: "products", icon: CraneIcon },
+  { href: "/qas", key: "qas", icon: HelpIcon },
   { href: "/settings", key: "settings", icon: GearIcon },
 ] as const;
 

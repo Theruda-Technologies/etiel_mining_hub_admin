@@ -37,6 +37,7 @@
     "dashboard": "Dashboard",
     "orders": "Orders",
     "products": "Products and Services",
+    "qas": "QAs",
     "settings": "Settings",
     "copyright": "© 2024 Etiel Admin"
   },
@@ -220,6 +221,29 @@
     "inviteEmailNotSent": "Invite email was not sent. Check SMTP settings in .env.local.",
     "inviteUnreachable": "Unable to dispatch invitation.",
     "inviteOnlySuperAdmin": "Signed in as {{role}}. Only a Super Admin can dispatch invitations and manage users."
+  },
+  "qas": {
+    "title": "QAs",
+    "subtitle": "Contact questions and inquiries from users.",
+    "empty": "No inquiries yet.",
+    "count": "{{count}} inquiries",
+    "name": "Name",
+    "contact": "Contact",
+    "phone": "Phone",
+    "email": "Email",
+    "message": "Question",
+    "date": "Date",
+    "statusLabel": "Status",
+    "internalNotes": "Internal notes",
+    "notesPlaceholder": "Add follow-up notes for your team…",
+    "saveNotes": "Save notes",
+    "updateFailed": "Unable to update inquiry.",
+    "status": {
+      "new": "New",
+      "in_progress": "In progress",
+      "closed": "Closed",
+      "resolved": "Resolved"
+    }
   },
   "login": {
     "title": "Sign in",
