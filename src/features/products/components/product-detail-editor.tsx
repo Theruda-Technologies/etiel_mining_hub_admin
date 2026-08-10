@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { ChevronRightIcon } from "@/shared/components/icons";
 import type { CatalogProduct, CatalogStatus } from "../data/catalog";
 import type { CatalogCategory } from "../data/categories";
@@ -29,6 +30,7 @@ export function ProductDetailEditor({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function updateLocal(patch: Partial<CatalogProduct>) {
     setProduct((prev) => ({ ...prev, ...patch }));
@@ -87,6 +89,7 @@ export function ProductDetailEditor({
         const data = (await res.json()) as { error?: string };
         setError(data.error ?? t("products.catalogUnreachable"));
         setSaving(false);
+        setConfirmOpen(false);
         return;
       }
       router.push("/products");
@@ -94,6 +97,7 @@ export function ProductDetailEditor({
     } catch {
       setError(t("products.catalogUnreachable"));
       setSaving(false);
+      setConfirmOpen(false);
     }
   }
 
@@ -135,10 +139,22 @@ export function ProductDetailEditor({
         product={product}
         categories={categories}
         onChange={updateLocal}
-        onDelete={() => void handleDelete()}
+        onDelete={() => setConfirmOpen(true)}
         onSave={() => void handleSave()}
         saving={saving}
         dirty={dirty}
+      />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t("products.confirmDeleteTitle")}
+        message={t("products.confirmDeleteProduct")}
+        busy={saving}
+        onCancel={() => {
+          if (saving) return;
+          setConfirmOpen(false);
+        }}
+        onConfirm={() => void handleDelete()}
       />
     </div>
   );

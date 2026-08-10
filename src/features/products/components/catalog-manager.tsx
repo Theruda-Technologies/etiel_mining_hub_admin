@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FilterLinesIcon, ImageOffIcon } from "@/shared/components/icons";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { useSearchQuery } from "@/shared/components/search-context";
 import { cn } from "@/shared/utils";
 import {
@@ -51,6 +52,11 @@ export function CatalogManager({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | CatalogStatus>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    kind: "product" | "service";
+    id: string;
+    title: string;
+  } | null>(null);
   const [clearingAd, setClearingAd] = useState(false);
 
   const advertisement = useMemo(() => {
@@ -124,33 +130,44 @@ export function CatalogManager({
     i18n.language,
   ]);
 
-  async function deleteProduct(id: string) {
-    setBusyId(id);
-    try {
-      const res = await fetch("/api/catalog/products", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      if (res.ok) {
-        setProducts((prev) => prev.filter((item) => item.id !== id));
-        router.refresh();
-      }
-    } finally {
-      setBusyId(null);
-    }
+  function requestDeleteProduct(id: string) {
+    const product = products.find((item) => item.id === id);
+    setPendingDelete({
+      kind: "product",
+      id,
+      title: product?.title ?? "",
+    });
   }
 
-  async function deleteService(id: string) {
+  function requestDeleteService(id: string) {
+    const service = services.find((item) => item.id === id);
+    setPendingDelete({
+      kind: "service",
+      id,
+      title: service?.title ?? "",
+    });
+  }
+
+  async function confirmPendingDelete() {
+    if (!pendingDelete) return;
+    const { kind, id } = pendingDelete;
     setBusyId(id);
     try {
-      const res = await fetch("/api/catalog/services", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
+      const res = await fetch(
+        kind === "product" ? "/api/catalog/products" : "/api/catalog/services",
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        },
+      );
       if (res.ok) {
-        setServices((prev) => prev.filter((item) => item.id !== id));
+        if (kind === "product") {
+          setProducts((prev) => prev.filter((item) => item.id !== id));
+        } else {
+          setServices((prev) => prev.filter((item) => item.id !== id));
+        }
+        setPendingDelete(null);
         router.refresh();
       }
     } finally {
@@ -355,7 +372,7 @@ export function CatalogManager({
               status: product.status,
             }))}
             busyId={busyId}
-            onDelete={(id) => void deleteProduct(id)}
+            onDelete={requestDeleteProduct}
           />
         )
       ) : filteredServices.length === 0 ? (
@@ -372,9 +389,25 @@ export function CatalogManager({
             status: service.status,
           }))}
           busyId={busyId}
-          onDelete={(id) => void deleteService(id)}
+          onDelete={requestDeleteService}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={t("products.confirmDeleteTitle")}
+        message={
+          pendingDelete?.kind === "service"
+            ? t("products.confirmDeleteService")
+            : t("products.confirmDeleteProduct")
+        }
+        busy={busyId !== null && busyId === pendingDelete?.id}
+        onCancel={() => {
+          if (busyId) return;
+          setPendingDelete(null);
+        }}
+        onConfirm={() => void confirmPendingDelete()}
+      />
     </div>
   );
 }
