@@ -4,22 +4,18 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import type { EmailOtpType } from "@supabase/supabase-js";
 import { KeyIcon, LoginArrowIcon } from "@/shared/components/icons";
 import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
-import { createClient } from "@/lib/supabase/client";
 
 /**
- * Do NOT verify the recovery token on page load.
- * Email security scanners often prefetch links and would burn a one-time OTP.
- * Verify only when the user submits a new password.
+ * Uses an app-owned reset token (query ?token=...).
+ * Token is only consumed when the user submits a new password — safe from email scanners.
  */
 export function ResetPasswordForm() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [tokenHash, setTokenHash] = useState<string | null>(null);
-  const [tokenType, setTokenType] = useState<EmailOtpType>("recovery");
+  const [token, setToken] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -40,14 +36,27 @@ export function ResetPasswordForm() {
       return;
     }
 
-    const fromQuery = url.searchParams.get("token_hash");
+    const fromQuery = url.searchParams.get("token");
+    const fromSession =
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("password_reset_token")
+        : null;
+
     if (fromQuery) {
-      setTokenHash(fromQuery);
-      setTokenType(
-        (url.searchParams.get("type") as EmailOtpType | null) || "recovery",
-      );
-      // Keep token in memory; strip from URL so refreshes/shares don't leak it.
+      setToken(fromQuery);
+      sessionStorage.setItem("password_reset_token", fromQuery);
       window.history.replaceState({}, "", "/reset-password");
+      return;
+    }
+
+    if (fromSession) {
+      setToken(fromSession);
+      return;
+    }
+
+    // Legacy Supabase OTP links are no longer supported.
+    if (url.searchParams.get("token_hash")) {
+      setLinkError(t("login.resetLinkInvalid"));
       return;
     }
 
@@ -59,7 +68,7 @@ export function ResetPasswordForm() {
     setError(null);
     setMessage(null);
 
-    if (!tokenHash) {
+    if (!token) {
       setError(t("login.resetLinkInvalid"));
       return;
     }
@@ -74,30 +83,21 @@ export function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const supabase = createClient();
-
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: tokenType,
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
       });
-      if (otpError) {
-        setError(otpError.message || t("login.resetLinkInvalid"));
-        setLoading(false);
-        return;
-      }
-
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
-      if (updateError) {
-        setError(updateError.message);
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? t("login.resetLinkInvalid"));
         setLoading(false);
         return;
       }
 
       setMessage(t("login.resetSuccess"));
-      setTokenHash(null);
-      await supabase.auth.signOut();
+      setToken(null);
+      sessionStorage.removeItem("password_reset_token");
       setTimeout(() => {
         router.push("/login");
         router.refresh();
@@ -108,7 +108,7 @@ export function ResetPasswordForm() {
     }
   }
 
-  const canReset = Boolean(tokenHash) && !linkError;
+  const canReset = Boolean(token) && !linkError;
 
   return (
     <form

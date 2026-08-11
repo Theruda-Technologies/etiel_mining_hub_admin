@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
+import { createPasswordResetToken } from "@/lib/password-reset";
 import {
   isSmtpConfigured,
   sendPasswordResetEmail,
@@ -47,27 +48,25 @@ export async function POST(request: Request) {
       return NextResponse.json(generic);
     }
 
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: `${appUrl}/reset-password`,
+    // App-owned token (not Supabase OTP) — email scanners cannot burn it by GET.
+    const reset = createPasswordResetToken();
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      user.id,
+      {
+        user_metadata: {
+          ...user.user_metadata,
+          password_reset_token: reset.hash,
+          password_reset_expires: reset.expiresAt,
+        },
       },
-    });
+    );
 
-    const hashedToken = data?.properties?.hashed_token;
-    if (error || !hashedToken) {
-      console.error("forgot-password generateLink:", error?.message);
+    if (updateError) {
+      console.error("forgot-password store token:", updateError.message);
       return NextResponse.json(generic);
     }
 
-    // Link straight to our app — do NOT use Supabase /auth/v1/verify
-    // (that redirects to Site URL, often still localhost).
-    const resetUrl =
-      `${appUrl}/reset-password` +
-      `?token_hash=${encodeURIComponent(hashedToken)}` +
-      `&type=recovery`;
-
+    const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(reset.raw)}`;
     const fullName =
       (user.user_metadata?.full_name as string | undefined) ||
       email.split("@")[0];
