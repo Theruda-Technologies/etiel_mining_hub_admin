@@ -170,7 +170,7 @@ export function ResetPasswordForm() {
     try {
       const { error: updateError } = await updatePassword(password);
       if (updateError) {
-        setError(t("settings.passwordUpdateFailed"));
+        setError(updateError.message || t("settings.passwordUpdateFailed"));
         submitting.current = false;
         setLoading(false);
         return;
@@ -180,8 +180,12 @@ export function ResetPasswordForm() {
       setTimeout(() => {
         router.replace("/login");
       }, 1200);
-    } catch {
-      setError(t("settings.passwordUpdateFailed"));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : t("settings.passwordUpdateFailed"),
+      );
       submitting.current = false;
       setLoading(false);
     }
