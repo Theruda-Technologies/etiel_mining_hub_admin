@@ -57,6 +57,29 @@ export async function POST(request: Request) {
     });
   }
 
+  const role = parseRole(
+    data.user.app_metadata?.role ??
+      profile?.role ??
+      data.user.user_metadata?.role,
+  );
+
+  // Only staff may use the admin hub.
+  const rawRole =
+    data.user.app_metadata?.role ??
+    profile?.role ??
+    data.user.user_metadata?.role;
+  if (
+    rawRole !== "super_admin" &&
+    rawRole !== "admin" &&
+    rawRole !== "operator"
+  ) {
+    await supabase.auth.signOut();
+    return NextResponse.json(
+      { error: "This account does not have admin access." },
+      { status: 403 },
+    );
+  }
+
   const avatarUrl =
     typeof data.user.user_metadata?.avatar_url === "string"
       ? data.user.user_metadata.avatar_url
@@ -70,11 +93,7 @@ export async function POST(request: Request) {
         profile?.full_name ??
         data.user.user_metadata?.full_name ??
         email.split("@")[0],
-      role: parseRole(
-        data.user.app_metadata?.role ??
-          profile?.role ??
-          data.user.user_metadata?.role,
-      ),
+      role,
       avatarUrl,
     },
   });

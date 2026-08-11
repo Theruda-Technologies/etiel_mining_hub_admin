@@ -204,6 +204,7 @@
     "placeholderInviteName": "John Doe",
     "roleAdmin": "Admin",
     "roleSuperAdmin": "Super Admin",
+    "roleCustomer": "Customer",
     "statusActive": "active",
     "statusSuspended": "suspended",
     "statusInvited": "invited",

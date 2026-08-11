@@ -34,19 +34,22 @@ function resolveRole(
   appRole: unknown,
   profileRole: unknown,
   metaRole: unknown,
-): UserRole {
+): UserRole | null {
   // Prefer auth app_metadata so Super Admin works even if profile.role is stale.
   if (appRole === "super_admin" || appRole === "admin") {
     return parseRole(appRole);
   }
-  // Staff profiles must never fall back to customer.
   if (profileRole === "super_admin" || profileRole === "admin") {
     return parseRole(profileRole);
   }
   if (metaRole === "super_admin" || metaRole === "admin") {
     return parseRole(metaRole);
   }
-  return parseRole(profileRole ?? metaRole);
+  if (appRole === "operator" || profileRole === "operator" || metaRole === "operator") {
+    return "admin";
+  }
+  // Customers / unknown roles are not admin-hub staff.
+  return null;
 }
 
 export async function getSession(): Promise<AuthSession | null> {
@@ -92,6 +95,13 @@ export async function getSession(): Promise<AuthSession | null> {
         ? user.user_metadata.avatar_url
         : null;
 
+    const role = resolveRole(
+      user.app_metadata?.role,
+      profile?.role,
+      user.user_metadata?.role,
+    );
+    if (!role) return null;
+
     return {
       id: user.id,
       email: profile?.email ?? user.email ?? "",
@@ -99,11 +109,7 @@ export async function getSession(): Promise<AuthSession | null> {
         profile?.full_name ??
         (user.user_metadata?.full_name as string | undefined) ??
         (user.email?.split("@")[0] ?? "User"),
-      role: resolveRole(
-        user.app_metadata?.role,
-        profile?.role,
-        user.user_metadata?.role,
-      ),
+      role,
       avatarUrl,
       authenticatedAt: new Date().toISOString(),
     };
@@ -136,9 +142,11 @@ export async function getUserRole(userId: string): Promise<UserRole> {
     .select("role")
     .eq("id", userId)
     .maybeSingle();
-  return resolveRole(
-    authUser.user?.app_metadata?.role,
-    data?.role,
-    authUser.user?.user_metadata?.role,
+  return (
+    resolveRole(
+      authUser.user?.app_metadata?.role,
+      data?.role,
+      authUser.user?.user_metadata?.role,
+    ) ?? "admin"
   );
 }

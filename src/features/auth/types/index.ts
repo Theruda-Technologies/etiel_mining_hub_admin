@@ -1,5 +1,8 @@
 export type UserRole = "super_admin" | "admin";
 
+/** Roles that may appear on profiles (admin hub + public customers). */
+export type ProfileRole = UserRole | "customer";
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -91,7 +94,23 @@ export function parseRole(value: unknown): UserRole {
   }
   // Legacy operator accounts map to admin access until migrated
   if (value === "operator") return "admin";
+  // Unknown / customer / null are not staff — callers must not treat this as access grant.
+  // Default to admin only for session fallbacks where a logged-in dashboard user is expected.
   return "admin";
+}
+
+/** Normalize a stored role for display in Settings (does not grant access). */
+export function parseProfileRole(value: unknown): ProfileRole {
+  if (value === "super_admin" || value === "admin" || value === "customer") {
+    return value;
+  }
+  if (value === "operator") return "admin";
+  return "customer";
+}
+
+/** True when the value is an admin-hub staff role (not customer/public). */
+export function isStaffRole(value: unknown): value is UserRole {
+  return value === "super_admin" || value === "admin" || value === "operator";
 }
 
 export function roleLabel(role: UserRole) {

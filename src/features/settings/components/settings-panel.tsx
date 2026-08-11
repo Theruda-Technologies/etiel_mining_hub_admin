@@ -2,11 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { AuthSession, UserRole } from "@/features/auth/types";
+import type { AuthSession, ProfileRole } from "@/features/auth/types";
 import {
   ROLE_PERMISSIONS,
   canBlockUser,
-  roleLabel,
 } from "@/features/auth/types";
 import {
   KeyIcon,
@@ -23,7 +22,7 @@ type AdminUser = {
   id: string;
   email: string;
   full_name: string;
-  role: UserRole;
+  role: ProfileRole;
   status: string;
   avatar_url?: string | null;
 };
@@ -85,10 +84,16 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
       (user) =>
         user.full_name.toLowerCase().includes(q) ||
         user.email.toLowerCase().includes(q) ||
-        roleLabel(user.role).toLowerCase().includes(q) ||
+        displayRoleLabel(user.role).toLowerCase().includes(q) ||
         user.status.toLowerCase().includes(q),
     );
-  }, [users, userFilter, query]);
+  }, [users, userFilter, query, t]);
+
+  function displayRoleLabel(role: ProfileRole) {
+    if (role === "super_admin") return t("settings.roleSuperAdmin");
+    if (role === "admin") return t("settings.roleAdmin");
+    return t("settings.roleCustomer");
+  }
 
   async function saveProfile(nextAvatarUrl?: string) {
     setProfileBusy(true);
@@ -270,6 +275,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
     if (
       user.id !== session.id &&
+      user.role === "admin" &&
       canBlockUser(session.role, user.role) &&
       (user.status === "active" ||
         user.status === "suspended" ||
@@ -521,9 +527,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                             </p>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
-                                {user.role === "super_admin"
-                                  ? t("settings.roleSuperAdmin")
-                                  : t("settings.roleAdmin")}
+                                {displayRoleLabel(user.role)}
                               </span>
                               <span className="font-mono text-[11px] tracking-wide text-muted uppercase">
                                 {user.status === "suspended"
@@ -604,9 +608,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
                             </td>
                             <td className="px-1 py-3.5">
                               <span className="rounded bg-[#2a2a2a] px-2.5 py-1 font-mono text-[10px] tracking-wide text-muted-strong uppercase">
-                                {user.role === "super_admin"
-                                  ? t("settings.roleSuperAdmin")
-                                  : t("settings.roleAdmin")}
+                                {displayRoleLabel(user.role)}
                               </span>
                             </td>
                             <td className="px-1 py-3.5 font-mono text-[11px] tracking-wide text-muted uppercase">

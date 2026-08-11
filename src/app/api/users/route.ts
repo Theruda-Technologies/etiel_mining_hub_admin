@@ -4,6 +4,7 @@ import { getSession, requireSuperAdmin } from "@/features/auth/lib/server";
 import { forceProfileStaffRole } from "@/features/auth/lib/force-profile-role";
 import {
   canBlockUser,
+  parseProfileRole,
   parseRole,
   type UserRole,
 } from "@/features/auth/types";
@@ -45,11 +46,13 @@ export async function GET(request: Request) {
 
   let users = (profiles ?? []).map((profile) => {
     const meta = metaById.get(profile.id);
+    // Auth app_metadata wins for staff; otherwise show the profile role as-is.
+    const rawRole = meta?.role || profile.role;
     return {
       id: profile.id,
       email: profile.email,
       full_name: profile.full_name,
-      role: parseRole(meta?.role ?? profile.role),
+      role: parseProfileRole(rawRole),
       status: meta?.status ?? "active",
       created_at: profile.created_at,
       invited_by: meta?.invited_by ?? null,
