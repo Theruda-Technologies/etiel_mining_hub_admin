@@ -31,15 +31,29 @@ export function ResetPasswordForm() {
 
       try {
         const url = new URL(window.location.href);
-        const tokenHash = url.searchParams.get("token_hash");
-        const type = url.searchParams.get("type") as EmailOtpType | null;
 
-        if (tokenHash && type) {
+        // Old Supabase verify redirects land here with #error=...
+        const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+        const hashParams = new URLSearchParams(hash);
+        if (hashParams.get("error")) {
+          const description =
+            hashParams.get("error_description")?.replaceAll("+", " ") ||
+            t("login.resetLinkInvalid");
+          throw new Error(description);
+        }
+
+        const tokenHash = url.searchParams.get("token_hash");
+        const type = (url.searchParams.get("type") ||
+          "recovery") as EmailOtpType;
+
+        if (tokenHash) {
           const { error: otpError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type,
           });
           if (otpError) throw otpError;
+          // Drop secrets from the address bar after verify.
+          window.history.replaceState({}, "", "/reset-password");
         }
 
         const {

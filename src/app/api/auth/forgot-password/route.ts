@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  getPasswordResetRedirectUrl,
-  withRedirectTo,
-} from "@/lib/app-url";
+import { getAppUrl } from "@/lib/app-url";
 import {
   isSmtpConfigured,
   sendPasswordResetEmail,
@@ -39,7 +36,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const redirectTo = getPasswordResetRedirectUrl(request);
+  const appUrl = getAppUrl(request);
 
   try {
     const admin = createAdminClient();
@@ -53,15 +50,23 @@ export async function POST(request: Request) {
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo },
+      options: {
+        redirectTo: `${appUrl}/reset-password`,
+      },
     });
 
-    if (error || !data.properties?.action_link) {
+    const hashedToken = data?.properties?.hashed_token;
+    if (error || !hashedToken) {
       console.error("forgot-password generateLink:", error?.message);
       return NextResponse.json(generic);
     }
 
-    const resetUrl = withRedirectTo(data.properties.action_link, redirectTo);
+    // Link straight to our app — do NOT use Supabase /auth/v1/verify
+    // (that redirects to Site URL, often still localhost).
+    const resetUrl =
+      `${appUrl}/reset-password` +
+      `?token_hash=${encodeURIComponent(hashedToken)}` +
+      `&type=recovery`;
 
     const fullName =
       (user.user_metadata?.full_name as string | undefined) ||
