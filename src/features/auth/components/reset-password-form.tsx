@@ -4,18 +4,22 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { createClient } from "@/lib/supabase/client";
 import { KeyIcon, LoginArrowIcon } from "@/shared/components/icons";
 import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 
+const TOKEN_KEY = "password_reset_token_hash";
+
 /**
- * Uses an app-owned reset token (query ?token=...).
- * Token is only consumed when the user submits a new password — safe from email scanners.
+ * Recovery link lands here with ?token_hash=…&type=recovery.
+ * OTP is verified only on submit (establishes recovery session), then
+ * updateUser({ password }) — email scanners cannot burn the token with a GET.
  */
 export function ResetPasswordForm() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
+  const [tokenHash, setTokenHash] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -36,27 +40,19 @@ export function ResetPasswordForm() {
       return;
     }
 
-    const fromQuery = url.searchParams.get("token");
+    const fromQuery = url.searchParams.get("token_hash");
     const fromSession =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("password_reset_token")
-        : null;
+      typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
 
     if (fromQuery) {
-      setToken(fromQuery);
-      sessionStorage.setItem("password_reset_token", fromQuery);
+      setTokenHash(fromQuery);
+      sessionStorage.setItem(TOKEN_KEY, fromQuery);
       window.history.replaceState({}, "", "/reset-password");
       return;
     }
 
     if (fromSession) {
-      setToken(fromSession);
-      return;
-    }
-
-    // Legacy Supabase OTP links are no longer supported.
-    if (url.searchParams.get("token_hash")) {
-      setLinkError(t("login.resetLinkInvalid"));
+      setTokenHash(fromSession);
       return;
     }
 
@@ -68,7 +64,7 @@ export function ResetPasswordForm() {
     setError(null);
     setMessage(null);
 
-    if (!token) {
+    if (!tokenHash) {
       setError(t("login.resetLinkInvalid"));
       return;
     }
@@ -83,21 +79,41 @@ export function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+      const supabase = createClient();
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "recovery",
       });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        setError(data.error ?? t("login.resetLinkInvalid"));
+
+      if (verifyError) {
+        setError(t("login.resetLinkInvalid"));
         setLoading(false);
         return;
       }
 
+      const { data: userData } = await supabase.auth.getUser();
+      const meta = userData.user?.user_metadata ?? {};
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+        data: {
+          ...meta,
+          status: meta.status === "invited" ? "active" : meta.status,
+          temporary_password: null,
+          password: null,
+        },
+      });
+
+      if (updateError) {
+        setError(updateError.message);
+        setLoading(false);
+        return;
+      }
+
+      await supabase.auth.signOut();
+      sessionStorage.removeItem(TOKEN_KEY);
       setMessage(t("login.resetSuccess"));
-      setToken(null);
-      sessionStorage.removeItem("password_reset_token");
+      setTokenHash(null);
       setTimeout(() => {
         router.push("/login");
         router.refresh();
@@ -108,7 +124,7 @@ export function ResetPasswordForm() {
     }
   }
 
-  const canReset = Boolean(token) && !linkError;
+  const canReset = Boolean(tokenHash) && !linkError;
 
   return (
     <form

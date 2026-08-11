@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAppUrl } from "@/lib/app-url";
-import { createPasswordResetToken } from "@/lib/password-reset";
+import {
+  getAppUrl,
+  getPasswordResetRedirectUrl,
+} from "@/lib/app-url";
 import {
   isSmtpConfigured,
   sendPasswordResetEmail,
@@ -37,38 +39,33 @@ export async function POST(request: Request) {
     );
   }
 
+  const redirectTo = getPasswordResetRedirectUrl(request);
   const appUrl = getAppUrl(request);
 
   try {
     const admin = createAdminClient();
-    const { data: listed } = await admin.auth.admin.listUsers({ perPage: 200 });
-    const user = listed.users.find((u) => u.email?.toLowerCase() === email);
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo },
+    });
 
-    if (!user) {
+    if (error || !data?.properties?.hashed_token) {
+      // Unknown email / generate failure — still look identical to success.
+      if (error) {
+        console.error("forgot-password generateLink:", error.message);
+      }
       return NextResponse.json(generic);
     }
 
-    // App-owned token (not Supabase OTP) — email scanners cannot burn it by GET.
-    const reset = createPasswordResetToken();
-    const { error: updateError } = await admin.auth.admin.updateUserById(
-      user.id,
-      {
-        user_metadata: {
-          ...user.user_metadata,
-          password_reset_token: reset.hash,
-          password_reset_expires: reset.expiresAt,
-        },
-      },
-    );
+    // Deep-link into the app with token_hash (do not email supabase /verify —
+    // GET scanners and Site URL redirects burn or mis-route that link).
+    const resetUrl = `${appUrl}/reset-password?token_hash=${encodeURIComponent(
+      data.properties.hashed_token,
+    )}&type=recovery`;
 
-    if (updateError) {
-      console.error("forgot-password store token:", updateError.message);
-      return NextResponse.json(generic);
-    }
-
-    const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(reset.raw)}`;
     const fullName =
-      (user.user_metadata?.full_name as string | undefined) ||
+      (data.user?.user_metadata?.full_name as string | undefined) ||
       email.split("@")[0];
 
     const mail = await sendPasswordResetEmail({

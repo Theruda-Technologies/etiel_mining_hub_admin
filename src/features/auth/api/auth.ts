@@ -10,3 +10,31 @@ export async function signOut() {
   const supabase = createClient();
   return supabase.auth.signOut();
 }
+
+/** Request a password reset email (Resend via our API + Supabase recovery link). */
+export async function resetPassword(email: string) {
+  const response = await fetch("/api/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    message?: string;
+  };
+
+  if (!response.ok) {
+    return {
+      error: data.error ?? "Could not send password reset email.",
+      message: undefined as string | undefined,
+    };
+  }
+
+  return {
+    error: undefined as string | undefined,
+    message:
+      data.message ??
+      "If that email is registered, a password reset link has been sent.",
+  };
+}

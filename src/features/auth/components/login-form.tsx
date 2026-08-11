@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { resetPassword } from "@/features/auth/api/auth";
 import {
   KeyIcon,
   LoginArrowIcon,
@@ -62,23 +63,16 @@ export function LoginForm() {
     setMessage(null);
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        message?: string;
-      };
+      const { error: resetError, message: resetMessage } =
+        await resetPassword(email);
 
-      if (!response.ok) {
-        setError(data.error ?? t("login.forgotFailed"));
+      if (resetError) {
+        setError(resetError);
         setLoading(false);
         return;
       }
 
-      setMessage(data.message ?? t("login.forgotSent"));
+      setMessage(resetMessage ?? t("login.forgotSent"));
       setLoading(false);
     } catch {
       setError(t("login.authUnreachable"));
