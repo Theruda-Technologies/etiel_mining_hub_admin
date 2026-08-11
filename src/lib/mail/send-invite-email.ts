@@ -15,7 +15,16 @@ function resendApiKey() {
 }
 
 function fromAddress() {
-  return process.env.SMTP_FROM?.trim() || process.env.RESEND_FROM?.trim() || "";
+  const raw =
+    process.env.SMTP_FROM?.trim() || process.env.RESEND_FROM?.trim() || "";
+  // Vercel/dashboard env values are often pasted with wrapping quotes.
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1).trim();
+  }
+  return raw;
 }
 
 /** Invite mail uses Resend HTTP (Workers-compatible; no SMTP sockets). */

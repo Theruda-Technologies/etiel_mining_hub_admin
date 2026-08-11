@@ -22,7 +22,7 @@
   "vars": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://ccompobtyzjanpcfmhxi.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_HSIdyiSfEkK1Aq50Y6K0JQ_i58feaqb",
-    "NEXT_PUBLIC_APP_URL": "https://etiel-mining-hub-admin.herieshetu.workers.dev",
-    "SMTP_FROM": "Etiel Mining Hub <onboarding@resend.dev>"
+    "NEXT_PUBLIC_APP_URL": "https://admin.etielmininghub.com",
+    "SMTP_FROM": "Etiel Mining Hub <noreply@admin.etielmininghub.com>"
   }
 }
