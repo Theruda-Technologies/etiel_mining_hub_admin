@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/features/auth/lib/server";
+import { forceProfileStaffRole } from "@/features/auth/lib/force-profile-role";
 import { type UserRole } from "@/features/auth/types";
 import {
   isSmtpConfigured,
@@ -88,19 +89,17 @@ export async function POST(request: Request) {
       );
     }
 
-    await admin.from("profiles").upsert({
+    const profileResult = await forceProfileStaffRole({
       id: data.user.id,
       email,
-      full_name: fullName,
+      fullName,
       role: "admin",
-      updated_at: new Date().toISOString(),
+      avatarUrl,
+      invitedBy: session.id,
     });
 
-    if (avatarUrl) {
-      await admin
-        .from("profiles")
-        .update({ avatar_url: avatarUrl })
-        .eq("id", data.user.id);
+    if (profileResult.error) {
+      console.warn("invite profile role sync:", profileResult.error);
     }
 
     const mail = await sendInviteCredentialsEmail({

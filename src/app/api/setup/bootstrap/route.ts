@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { forceProfileStaffRole } from "@/features/auth/lib/force-profile-role";
 
 /**
  * Idempotent Super Admin bootstrap.
@@ -85,14 +86,15 @@ export async function POST(request: Request) {
     }
   }
 
-  // profiles.role may not allow "super_admin" on the live DB; Auth app_metadata is source of truth.
-  await admin.from("profiles").upsert({
+  const profile = await forceProfileStaffRole({
     id: user.id,
     email,
-    full_name: fullName,
-    role: "admin",
-    updated_at: new Date().toISOString(),
+    fullName,
+    role: "super_admin",
   });
+  if (profile.error) {
+    console.warn("bootstrap profile sync:", profile.error);
+  }
 
   return NextResponse.json({
     ok: true,

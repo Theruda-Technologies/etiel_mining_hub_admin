@@ -39,6 +39,13 @@ function resolveRole(
   if (appRole === "super_admin" || appRole === "admin") {
     return parseRole(appRole);
   }
+  // Staff profiles must never fall back to customer.
+  if (profileRole === "super_admin" || profileRole === "admin") {
+    return parseRole(profileRole);
+  }
+  if (metaRole === "super_admin" || metaRole === "admin") {
+    return parseRole(metaRole);
+  }
   return parseRole(profileRole ?? metaRole);
 }
 

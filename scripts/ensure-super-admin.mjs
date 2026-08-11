@@ -109,34 +109,50 @@ if (!user) {
   console.log("Updated Super Admin:", email);
 }
 
-const { error: profileError } = await admin.from("profiles").upsert({
-  id: user.id,
-  email,
-  full_name: fullName,
-  role: "admin",
-  updated_at: new Date().toISOString(),
-});
-
-if (profileError) {
-  console.warn("profiles upsert warning:", profileError.message);
+async function forceProfileRole(userId, profileEmail, name, role) {
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+  await admin.from("profiles").delete().eq("id", userId);
+  const row = {
+    id: userId,
+    email: profileEmail,
+    full_name: name,
+    role,
+    updated_at: new Date().toISOString(),
+  };
+  if (existing?.created_at) row.created_at = existing.created_at;
+  if (existing?.avatar_url) row.avatar_url = existing.avatar_url;
+  if (existing?.invited_by) row.invited_by = existing.invited_by;
+  const { error } = await admin.from("profiles").insert(row);
+  if (error) console.warn("profiles sync warning:", error.message);
 }
+
+await forceProfileRole(user.id, email, fullName, "super_admin");
 
 // Keep a single Super Admin: demote anyone else with that role.
 for (const other of listed.users) {
   if (other.id === user.id) continue;
   if (other.app_metadata?.role !== "super_admin") continue;
 
-  const { error } = await admin.auth.admin.updateUserById(other.id, {
-    app_metadata: { ...other.app_metadata, role: "admin" },
-  });
-  if (error) {
-    console.warn(`Could not demote ${other.email}:`, error.message);
+  const { error: demoteError } = await admin.auth.admin.updateUserById(
+    other.id,
+    {
+      app_metadata: { ...other.app_metadata, role: "admin" },
+    },
+  );
+  if (demoteError) {
+    console.warn(`Could not demote ${other.email}:`, demoteError.message);
     continue;
   }
-  await admin
-    .from("profiles")
-    .update({ role: "admin", updated_at: new Date().toISOString() })
-    .eq("id", other.id);
+  await forceProfileRole(
+    other.id,
+    other.email ?? "",
+    other.user_metadata?.full_name || other.email?.split("@")[0] || "User",
+    "admin",
+  );
   console.log("Demoted former Super Admin:", other.email);
 }
 

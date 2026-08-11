@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSession, requireSuperAdmin } from "@/features/auth/lib/server";
+import { forceProfileStaffRole } from "@/features/auth/lib/force-profile-role";
 import {
   canBlockUser,
   parseRole,
@@ -102,10 +103,22 @@ export async function PATCH(request: Request) {
     await admin.auth.admin.updateUserById(body.id, {
       app_metadata: { ...authUser.user.app_metadata, role: body.role },
     });
-    await admin
-      .from("profiles")
-      .update({ role: body.role, updated_at: new Date().toISOString() })
-      .eq("id", body.id);
+    const synced = await forceProfileStaffRole({
+      id: body.id,
+      email: authUser.user.email ?? "",
+      fullName:
+        (authUser.user.user_metadata?.full_name as string | undefined) ||
+        authUser.user.email?.split("@")[0] ||
+        "User",
+      role: body.role,
+      avatarUrl:
+        typeof authUser.user.user_metadata?.avatar_url === "string"
+          ? authUser.user.user_metadata.avatar_url
+          : null,
+    });
+    if (synced.error) {
+      return NextResponse.json({ error: synced.error }, { status: 500 });
+    }
   }
 
   if (body.status) {

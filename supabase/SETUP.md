@@ -69,11 +69,19 @@ This loads products, services, sample orders, demo admin accounts, and pending i
 |---------|-------|----------|
 | Demo Admin (invited) | `admin.demo@etiel.mining` | `AdminDemo!234` |
 
+## Profile staff roles (required for invites)
+
+If invited users show as `customer` in `profiles`, run in the Supabase SQL Editor:
+
+`supabase/migrations/008_fix_profile_staff_roles.sql`
+
+That lets the service role update staff roles. Until then, the app syncs roles via delete+insert.
+
 ## 5. Invite Admin users
 
 Only the **Super Admin** can invite users (Settings → Administrative Access):
 
-- Choose role: **Administrator** or **Super Admin**
+- Invites are always **Administrator** (Super Admin is not assignable from the UI)
 - Account is created in Supabase Auth + `profiles`
 - The app emails login **email + password** via Resend (password is not shown in the admin UI)
 
