@@ -4,21 +4,122 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import type { EmailOtpType } from "@supabase/supabase-js";
+import { updatePassword } from "@/features/auth/api/auth";
+import { createClient } from "@/lib/supabase/client";
 import { KeyIcon, LoginArrowIcon } from "@/shared/components/icons";
 import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 
 const TOKEN_KEY = "password_reset_token_hash";
 
+/** Deduplicate Strict Mode / remount so verifyOtp runs once per token. */
+let recoveryBootstrap: {
+  token: string;
+  promise: Promise<{ ok: true } | { ok: false; error: string }>;
+} | null = null;
+
+async function establishRecoverySession(
+  invalidMessage: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createClient();
+  const existing = await supabase.auth.getSession();
+  if (existing.data.session) {
+    return { ok: true };
+  }
+
+  const url = new URL(window.location.href);
+  const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+  const hashParams = new URLSearchParams(hash);
+
+  if (hashParams.get("error")) {
+    return {
+      ok: false,
+      error:
+        hashParams.get("error_description")?.replaceAll("+", " ") ||
+        invalidMessage,
+    };
+  }
+
+  const code = url.searchParams.get("code");
+  if (code) {
+    const cacheKey = `code:${code}`;
+    if (recoveryBootstrap?.token === cacheKey) {
+      return recoveryBootstrap.promise;
+    }
+    const promise = (async () => {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      window.history.replaceState({}, "", "/reset-password");
+      if (error) return { ok: false as const, error: invalidMessage };
+      return { ok: true as const };
+    })();
+    recoveryBootstrap = { token: cacheKey, promise };
+    return promise;
+  }
+
+  const accessToken = hashParams.get("access_token");
+  const refreshToken = hashParams.get("refresh_token");
+  if (accessToken && refreshToken) {
+    const cacheKey = `hash:${accessToken}`;
+    if (recoveryBootstrap?.token === cacheKey) {
+      return recoveryBootstrap.promise;
+    }
+    const promise = (async () => {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      window.history.replaceState({}, "", "/reset-password");
+      if (error) return { ok: false as const, error: invalidMessage };
+      return { ok: true as const };
+    })();
+    recoveryBootstrap = { token: cacheKey, promise };
+    return promise;
+  }
+
+  const tokenHash =
+    url.searchParams.get("token_hash") || sessionStorage.getItem(TOKEN_KEY);
+  const type = (url.searchParams.get("type") || "recovery") as EmailOtpType;
+
+  if (!tokenHash) {
+    return { ok: false, error: invalidMessage };
+  }
+
+  if (url.searchParams.get("token_hash")) {
+    sessionStorage.setItem(TOKEN_KEY, tokenHash);
+  }
+
+  if (recoveryBootstrap?.token === tokenHash) {
+    return recoveryBootstrap.promise;
+  }
+
+  const promise = (async () => {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type,
+    });
+    window.history.replaceState({}, "", "/reset-password");
+    if (error) {
+      return { ok: false as const, error: invalidMessage };
+    }
+    sessionStorage.removeItem(TOKEN_KEY);
+    return { ok: true as const };
+  })();
+
+  recoveryBootstrap = { token: tokenHash, promise };
+  return promise;
+}
+
 /**
- * Recovery link: /reset-password?token_hash=…&type=recovery
- * Token is only consumed on submit via POST /api/auth/reset-password.
+ * Email link establishes a recovery session on load (verifyOtp / code / hash).
+ * Submit only calls updateUser({ password }) on that session — no reset API.
  */
 export function ResetPasswordForm() {
   const { t } = useTranslation();
   const router = useRouter();
   const submitting = useRef(false);
-  const [tokenHash, setTokenHash] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -27,50 +128,36 @@ export function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const url = new URL(window.location.href);
+    let cancelled = false;
 
-    const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    const hashParams = new URLSearchParams(hash);
-    if (hashParams.get("error")) {
-      setLinkError(
-        hashParams.get("error_description")?.replaceAll("+", " ") ||
-          t("login.resetLinkInvalid"),
-      );
-      return;
-    }
+    (async () => {
+      const result = await establishRecoverySession(t("login.resetLinkInvalid"));
+      if (cancelled) return;
+      if (!result.ok) {
+        setLinkError(result.error);
+        setSessionReady(false);
+      } else {
+        setSessionReady(true);
+        setLinkError(null);
+      }
+      setBootstrapping(false);
+    })();
 
-    const fromQuery = url.searchParams.get("token_hash");
-    const fromSession = sessionStorage.getItem(TOKEN_KEY);
-
-    if (fromQuery) {
-      setTokenHash(fromQuery);
-      sessionStorage.setItem(TOKEN_KEY, fromQuery);
-      window.history.replaceState({}, "", "/reset-password");
-      return;
-    }
-
-    if (fromSession) {
-      setTokenHash(fromSession);
-      return;
-    }
-
-    setLinkError(t("login.resetLinkInvalid"));
-    // Run once on mount — re-running when `t` changes can race the token read.
+    return () => {
+      cancelled = true;
+    };
+    // Bootstrap once on mount; session check covers remounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || !sessionReady) return;
     setError(null);
     setMessage(null);
 
-    if (!tokenHash) {
-      setError(t("login.resetLinkInvalid"));
-      return;
-    }
-    if (password.length < 8) {
-      setError(t("settings.passwordTooShort"));
+    if (password.length < 6) {
+      setError(t("login.resetPasswordTooShort"));
       return;
     }
     if (password !== confirm) {
@@ -81,35 +168,26 @@ export function ResetPasswordForm() {
     submitting.current = true;
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token_hash: tokenHash, password }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-
-      if (!res.ok) {
-        setError(data.error ?? t("login.resetLinkInvalid"));
+      const { error: updateError } = await updatePassword(password);
+      if (updateError) {
+        setError(t("settings.passwordUpdateFailed"));
         submitting.current = false;
         setLoading(false);
         return;
       }
 
-      sessionStorage.removeItem(TOKEN_KEY);
-      setTokenHash(null);
-      setMessage(t("login.resetSuccess"));
+      setMessage(t("settings.passwordUpdated"));
       setTimeout(() => {
-        router.push("/login");
-        router.refresh();
+        router.replace("/login");
       }, 1200);
     } catch {
-      setError(t("login.authUnreachable"));
+      setError(t("settings.passwordUpdateFailed"));
       submitting.current = false;
       setLoading(false);
     }
   }
 
-  const canReset = Boolean(tokenHash) && !linkError;
+  const canReset = sessionReady && !linkError && !bootstrapping;
 
   return (
     <form
@@ -136,7 +214,11 @@ export function ResetPasswordForm() {
 
         <div className="mb-6 h-px bg-white/10" />
 
-        {!canReset ? (
+        {bootstrapping ? (
+          <p className="text-center text-[13px] text-muted">
+            {t("common.loading")}
+          </p>
+        ) : !canReset ? (
           <div className="space-y-4">
             <p className="text-[13px] text-danger">
               {linkError ?? t("login.resetLinkInvalid")}
@@ -159,7 +241,7 @@ export function ResetPasswordForm() {
                 <PasswordInput
                   required
                   autoComplete="new-password"
-                  minLength={8}
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -177,7 +259,7 @@ export function ResetPasswordForm() {
                 <PasswordInput
                   required
                   autoComplete="new-password"
-                  minLength={8}
+                  minLength={6}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="••••••••"

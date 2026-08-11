@@ -261,6 +261,7 @@
     "resetSubtitle": "ለመለያዎ አዲስ የይለፍ ቃል ይምረጡ።",
     "resetSubmit": "የይለፍ ቃል አዘምን",
     "resetSuccess": "የይለፍ ቃሉ ተዘምኗል። አሁን መግባት ይችላሉ።",
+    "resetPasswordTooShort": "አዲሱ የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት።",
     "resetLinkInvalid": "ይህ የመቀየሪያ አገናኝ ልክ ያልሆነ ወይም ጊዜው ያለፈበት ነው።",
     "backToSignIn": "ወደ መግቢያ ተመለስ",
     "authFailed": "ማረጋገጥ አልተሳካም።",

@@ -11,6 +11,12 @@ export async function signOut() {
   return supabase.auth.signOut();
 }
 
+/** Update password for the current (recovery) session. */
+export async function updatePassword(password: string) {
+  const supabase = createClient();
+  return supabase.auth.updateUser({ password });
+}
+
 /** Request a password reset email (Resend via our API + Supabase recovery link). */
 export async function resetPassword(email: string) {
   const response = await fetch("/api/auth/forgot-password", {

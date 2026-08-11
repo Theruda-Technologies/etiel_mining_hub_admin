@@ -261,6 +261,7 @@
     "resetSubtitle": "Choose a new password for your account.",
     "resetSubmit": "Update password",
     "resetSuccess": "Password updated. You can sign in now.",
+    "resetPasswordTooShort": "New password must be at least 6 characters.",
     "resetLinkInvalid": "This reset link is invalid or has expired.",
     "backToSignIn": "Back to sign in",
     "authFailed": "Authentication failed.",
