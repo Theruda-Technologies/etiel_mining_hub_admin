@@ -49,7 +49,7 @@ export async function POST(request: Request) {
             "Resend is required to email the invite password.",
             "Add to .env.local (or Worker secrets):",
             "SMTP_PASS=re_your_api_key",
-            'SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"',
+            'SMTP_FROM="Etiel Mining Hub <noreply@admin.etielmininghub.com>"',
             "Restart the dev server after saving.",
           ].join(" "),
         },

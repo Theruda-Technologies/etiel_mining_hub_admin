@@ -27,7 +27,7 @@ function missingConfigMessage() {
   return [
     "Resend is not configured. Add to .env.local (or Worker secrets):",
     "SMTP_PASS=re_your_api_key   (or RESEND_API_KEY)",
-    'SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"',
+    'SMTP_FROM="Etiel Mining Hub <noreply@admin.etielmininghub.com>"',
     "Free signup: https://resend.com",
   ].join(" ");
 }

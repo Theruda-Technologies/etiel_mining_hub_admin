@@ -86,13 +86,13 @@ Invites are sent with the Resend HTTP API (works on Cloudflare Workers; no SMTP 
 
 ```bash
 SMTP_PASS=re_your_api_key
-SMTP_FROM="Etiel Mining Hub <onboarding@resend.dev>"
+SMTP_FROM="Etiel Mining Hub <noreply@admin.etielmininghub.com>"
 ```
 
 3. Restart `npm run dev`
 
-`onboarding@resend.dev` works for testing (sends to your Resend account email).
-For production, verify your domain in Resend and use an address on that domain.
+Use an address on your verified Resend domain (`admin.etielmininghub.com`).
+`onboarding@resend.dev` only delivers to your Resend account email.
 
 See [CLOUDFLARE.md](../CLOUDFLARE.md) for Worker secret names when deploying.
 

@@ -45,7 +45,7 @@ Required:
 | `NEXT_PUBLIC_APP_URL` | Variable (e.g. `https://etiel-mining-hub-admin.<subdomain>.workers.dev`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret |
 | `SUPER_ADMIN_SETUP_SECRET` | Secret |
-| `SMTP_FROM` | Variable (e.g. `Etiel Mining Hub <onboarding@resend.dev>`) |
+| `SMTP_FROM` | Variable (e.g. `Etiel Mining Hub <noreply@admin.etielmininghub.com>`) |
 | `SMTP_PASS` or `RESEND_API_KEY` | Secret (Resend API key) |
 
 After setting `NEXT_PUBLIC_*` vars, redeploy so they are baked into the client bundle:
