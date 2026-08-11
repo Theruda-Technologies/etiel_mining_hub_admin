@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  getPasswordResetRedirectUrl,
+  withRedirectTo,
+} from "@/lib/app-url";
+import {
   isSmtpConfigured,
   sendPasswordResetEmail,
 } from "@/lib/mail/send-invite-email";
@@ -35,10 +39,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    new URL(request.url).origin;
-  const redirectTo = `${appUrl}/reset-password`;
+  const redirectTo = getPasswordResetRedirectUrl(request);
 
   try {
     const admin = createAdminClient();
@@ -60,6 +61,8 @@ export async function POST(request: Request) {
       return NextResponse.json(generic);
     }
 
+    const resetUrl = withRedirectTo(data.properties.action_link, redirectTo);
+
     const fullName =
       (user.user_metadata?.full_name as string | undefined) ||
       email.split("@")[0];
@@ -67,7 +70,7 @@ export async function POST(request: Request) {
     const mail = await sendPasswordResetEmail({
       to: email,
       fullName,
-      resetUrl: data.properties.action_link,
+      resetUrl,
     });
 
     if (!mail.sent) {

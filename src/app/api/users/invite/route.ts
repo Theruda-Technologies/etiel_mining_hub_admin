@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/features/auth/lib/server";
 import { forceProfileStaffRole } from "@/features/auth/lib/force-profile-role";
 import { type UserRole } from "@/features/auth/types";
+import { getAppUrl } from "@/lib/app-url";
 import {
   isSmtpConfigured,
   sendInviteCredentialsEmail,
@@ -58,9 +59,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-      new URL(request.url).origin;
+    const appUrl = getAppUrl(request);
     const loginUrl = `${appUrl}/login`;
     const roleLabel = "Admin";
 
