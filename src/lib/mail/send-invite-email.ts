@@ -118,6 +118,77 @@ export async function sendInviteCredentialsEmail(
   }
 }
 
+export async function sendPasswordResetEmail(input: {
+  to: string;
+  fullName: string;
+  resetUrl: string;
+}): Promise<{ sent: true } | { sent: false; error: string }> {
+  if (!isSmtpConfigured()) {
+    return { sent: false, error: missingConfigMessage() };
+  }
+
+  const apiKey = resendApiKey();
+  const from = fromAddress();
+  const subject = "Reset your Etiel Mining Hub password";
+  const text = [
+    `Hello ${input.fullName},`,
+    "",
+    "We received a request to reset your Etiel Mining Hub password.",
+    "",
+    `Reset link: ${input.resetUrl}`,
+    "",
+    "If you did not request this, you can ignore this email.",
+    "",
+    "© Etiel Mining Hub Operational Center",
+  ].join("\n");
+
+  const html = `
+<h2>Reset your password</h2>
+<p>Hello ${escapeHtml(input.fullName)},</p>
+<p>We received a request to reset your Etiel Mining Hub password.</p>
+<p>
+  <a href="${escapeHtml(input.resetUrl)}" style="display:inline-block;padding:10px 16px;background:#e0a020;color:#000;text-decoration:none;font-weight:600;">
+    Reset password
+  </a>
+</p>
+<p style="font-size:12px;color:#666;">Or open this link:<br/>${escapeHtml(input.resetUrl)}</p>
+<p style="color:#666;font-size:12px;">If you did not request this, you can ignore this email.</p>
+`.trim();
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [input.to],
+        subject,
+        text,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      return {
+        sent: false,
+        error: body?.message ?? `Resend error (${res.status})`,
+      };
+    }
+
+    return { sent: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to send reset email.";
+    return { sent: false, error: message };
+  }
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")

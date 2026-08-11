@@ -275,7 +275,7 @@ export function SettingsPanel({ session }: { session: AuthSession }) {
 
     if (
       user.id !== session.id &&
-      user.role === "admin" &&
+      (user.role === "admin" || user.role === "customer") &&
       canBlockUser(session.role, user.role) &&
       (user.status === "active" ||
         user.status === "suspended" ||

@@ -34,7 +34,7 @@ export const ROLE_PERMISSIONS: Record<
   super_admin: {
     label: "Super Admin",
     description:
-      "Full system access. Dispatches invitations, assigns roles, and can block Admin accounts.",
+      "Full system access. Dispatches invitations, assigns roles, and can block Admin or Customer accounts.",
     routes: [
       "/dashboard",
       "/orders",
@@ -80,12 +80,11 @@ export function canBlockAdmins(role: UserRole) {
 }
 
 /** Whether `actor` may suspend/unsuspend a user with `targetRole`. */
-export function canBlockUser(actor: UserRole, targetRole: UserRole) {
-  // Only Super Admins can block, and only Admin accounts (not other Super Admins).
+export function canBlockUser(actor: UserRole, targetRole: ProfileRole | UserRole) {
+  // Only Super Admins can block, and never other Super Admins.
   if (actor !== "super_admin") return false;
   if (!canBlockAdmins(actor)) return false;
-  if (targetRole !== "admin") return false;
-  return true;
+  return targetRole === "admin" || targetRole === "customer";
 }
 
 export function parseRole(value: unknown): UserRole {

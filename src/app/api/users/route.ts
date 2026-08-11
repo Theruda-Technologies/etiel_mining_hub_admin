@@ -96,7 +96,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  const targetRole = parseRole(authUser.user.app_metadata?.role) as UserRole;
+  const { data: profileRow } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", body.id)
+    .maybeSingle();
+
+  const targetRole = parseProfileRole(
+    authUser.user.app_metadata?.role || profileRow?.role,
+  );
 
   // Role changes remain Super Admin only.
   if (body.role) {
@@ -129,10 +137,14 @@ export async function PATCH(request: Request) {
       body.status === "suspended" || body.status === "active";
 
     if (isBlockAction) {
-      if (session.role !== "super_admin" || !canBlockUser(session.role, targetRole)) {
+      if (
+        session.role !== "super_admin" ||
+        !canBlockUser(session.role, targetRole)
+      ) {
         return NextResponse.json(
           {
-            error: "Only a Super Admin can block or unblock Admin accounts.",
+            error:
+              "Only a Super Admin can block or unblock Admin or Customer accounts.",
           },
           { status: 403 },
         );
