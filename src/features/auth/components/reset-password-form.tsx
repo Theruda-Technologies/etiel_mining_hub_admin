@@ -1,10 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { createClient } from "@/lib/supabase/client";
 import { KeyIcon, LoginArrowIcon } from "@/shared/components/icons";
 import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
@@ -12,13 +11,13 @@ import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 const TOKEN_KEY = "password_reset_token_hash";
 
 /**
- * Recovery link lands here with ?token_hash=…&type=recovery.
- * OTP is verified only on submit (establishes recovery session), then
- * updateUser({ password }) — email scanners cannot burn the token with a GET.
+ * Recovery link: /reset-password?token_hash=…&type=recovery
+ * Token is only consumed on submit via POST /api/auth/reset-password.
  */
 export function ResetPasswordForm() {
   const { t } = useTranslation();
   const router = useRouter();
+  const submitting = useRef(false);
   const [tokenHash, setTokenHash] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
@@ -41,8 +40,7 @@ export function ResetPasswordForm() {
     }
 
     const fromQuery = url.searchParams.get("token_hash");
-    const fromSession =
-      typeof window !== "undefined" ? sessionStorage.getItem(TOKEN_KEY) : null;
+    const fromSession = sessionStorage.getItem(TOKEN_KEY);
 
     if (fromQuery) {
       setTokenHash(fromQuery);
@@ -57,10 +55,13 @@ export function ResetPasswordForm() {
     }
 
     setLinkError(t("login.resetLinkInvalid"));
-  }, [t]);
+    // Run once on mount — re-running when `t` changes can race the token read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
     setError(null);
     setMessage(null);
 
@@ -77,49 +78,33 @@ export function ResetPasswordForm() {
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
     try {
-      const supabase = createClient();
-
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: "recovery",
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token_hash: tokenHash, password }),
       });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
 
-      if (verifyError) {
-        setError(t("login.resetLinkInvalid"));
+      if (!res.ok) {
+        setError(data.error ?? t("login.resetLinkInvalid"));
+        submitting.current = false;
         setLoading(false);
         return;
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      const meta = userData.user?.user_metadata ?? {};
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-        data: {
-          ...meta,
-          status: meta.status === "invited" ? "active" : meta.status,
-          temporary_password: null,
-          password: null,
-        },
-      });
-
-      if (updateError) {
-        setError(updateError.message);
-        setLoading(false);
-        return;
-      }
-
-      await supabase.auth.signOut();
       sessionStorage.removeItem(TOKEN_KEY);
-      setMessage(t("login.resetSuccess"));
       setTokenHash(null);
+      setMessage(t("login.resetSuccess"));
       setTimeout(() => {
         router.push("/login");
         router.refresh();
       }, 1200);
     } catch {
       setError(t("login.authUnreachable"));
+      submitting.current = false;
       setLoading(false);
     }
   }
