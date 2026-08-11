@@ -10,11 +10,17 @@ import { PasswordInput } from "@/shared/components/password-input";
 import { LanguageSwitcher } from "@/shared/i18n/language-switcher";
 import { createClient } from "@/lib/supabase/client";
 
+/**
+ * Do NOT verify the recovery token on page load.
+ * Email security scanners often prefetch links and would burn a one-time OTP.
+ * Verify only when the user submits a new password.
+ */
 export function ResetPasswordForm() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [tokenHash, setTokenHash] = useState<string | null>(null);
+  const [tokenType, setTokenType] = useState<EmailOtpType>("recovery");
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,72 +28,30 @@ export function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    let active = true;
+    const url = new URL(window.location.href);
 
-    async function prepareSession() {
-      setChecking(true);
-      setError(null);
-
-      try {
-        const url = new URL(window.location.href);
-
-        // Old Supabase verify redirects land here with #error=...
-        const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-        const hashParams = new URLSearchParams(hash);
-        if (hashParams.get("error")) {
-          const description =
-            hashParams.get("error_description")?.replaceAll("+", " ") ||
-            t("login.resetLinkInvalid");
-          throw new Error(description);
-        }
-
-        const tokenHash = url.searchParams.get("token_hash");
-        const type = (url.searchParams.get("type") ||
-          "recovery") as EmailOtpType;
-
-        if (tokenHash) {
-          const { error: otpError } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type,
-          });
-          if (otpError) throw otpError;
-          // Drop secrets from the address bar after verify.
-          window.history.replaceState({}, "", "/reset-password");
-        }
-
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (active) setReady(Boolean(session));
-      } catch (err) {
-        if (active) {
-          setReady(false);
-          setError(
-            err instanceof Error
-              ? err.message
-              : t("login.resetLinkInvalid"),
-          );
-        }
-      } finally {
-        if (active) setChecking(false);
-      }
+    const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+    const hashParams = new URLSearchParams(hash);
+    if (hashParams.get("error")) {
+      setLinkError(
+        hashParams.get("error_description")?.replaceAll("+", " ") ||
+          t("login.resetLinkInvalid"),
+      );
+      return;
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-        setReady(true);
-        setChecking(false);
-      }
-    });
+    const fromQuery = url.searchParams.get("token_hash");
+    if (fromQuery) {
+      setTokenHash(fromQuery);
+      setTokenType(
+        (url.searchParams.get("type") as EmailOtpType | null) || "recovery",
+      );
+      // Keep token in memory; strip from URL so refreshes/shares don't leak it.
+      window.history.replaceState({}, "", "/reset-password");
+      return;
+    }
 
-    void prepareSession();
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
+    setLinkError(t("login.resetLinkInvalid"));
   }, [t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -95,6 +59,10 @@ export function ResetPasswordForm() {
     setError(null);
     setMessage(null);
 
+    if (!tokenHash) {
+      setError(t("login.resetLinkInvalid"));
+      return;
+    }
     if (password.length < 8) {
       setError(t("settings.passwordTooShort"));
       return;
@@ -107,6 +75,17 @@ export function ResetPasswordForm() {
     setLoading(true);
     try {
       const supabase = createClient();
+
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: tokenType,
+      });
+      if (otpError) {
+        setError(otpError.message || t("login.resetLinkInvalid"));
+        setLoading(false);
+        return;
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -115,7 +94,9 @@ export function ResetPasswordForm() {
         setLoading(false);
         return;
       }
+
       setMessage(t("login.resetSuccess"));
+      setTokenHash(null);
       await supabase.auth.signOut();
       setTimeout(() => {
         router.push("/login");
@@ -126,6 +107,8 @@ export function ResetPasswordForm() {
       setLoading(false);
     }
   }
+
+  const canReset = Boolean(tokenHash) && !linkError;
 
   return (
     <form
@@ -152,12 +135,10 @@ export function ResetPasswordForm() {
 
         <div className="mb-6 h-px bg-white/10" />
 
-        {checking ? (
-          <p className="text-[13px] text-muted">{t("common.loading")}</p>
-        ) : !ready ? (
+        {!canReset ? (
           <div className="space-y-4">
             <p className="text-[13px] text-danger">
-              {error ?? t("login.resetLinkInvalid")}
+              {linkError ?? t("login.resetLinkInvalid")}
             </p>
             <Link
               href="/login"
