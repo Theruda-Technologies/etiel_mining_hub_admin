@@ -127,9 +127,9 @@ export function LoginForm() {
           </label>
 
           {mode === "signin" ? (
-            <label className="block">
-              <span className="mb-2 flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
-                <span>{t("login.password")}</span>
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
+                <label htmlFor="login-password">{t("login.password")}</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -141,10 +141,11 @@ export function LoginForm() {
                 >
                   {t("login.forgotPassword")}
                 </button>
-              </span>
+              </div>
               <span className="relative block">
                 <KeyIcon className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted" />
                 <PasswordInput
+                  id="login-password"
                   required
                   autoComplete="current-password"
                   value={password}
@@ -153,7 +154,7 @@ export function LoginForm() {
                   inputClassName="h-11 w-full border border-white/15 bg-[#0f0f0f] pl-10 text-[13px] text-foreground outline-none placeholder:text-muted/70 focus:border-accent/60"
                 />
               </span>
-            </label>
+            </div>
           ) : null}
         </div>
 

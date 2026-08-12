@@ -27,9 +27,13 @@ export function PasswordInput({
       <button
         type="button"
         tabIndex={-1}
-        onClick={() => setVisible((v) => !v)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setVisible((v) => !v);
+        }}
         aria-label={visible ? t("common.hidePassword") : t("common.showPassword")}
-        className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded p-1 text-muted transition-colors hover:text-foreground"
+        className="absolute top-1/2 right-2.5 z-10 -translate-y-1/2 rounded p-1 text-muted transition-colors hover:text-foreground"
       >
         {visible ? (
           <EyeOffIcon className="size-4" />
